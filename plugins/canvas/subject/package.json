@@ -1,0 +1,18 @@
+{
+    "name": "canvas-plugin-subject",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Infinite Canvas 主体节点插件:保存角色或商品参考图,跨画布复用",
+    "scripts": {
+        "build": "node build.mjs",
+        "dev": "node build.mjs --watch",
+        "typecheck": "tsc --noEmit",
+        "test": "bun test"
+    },
+    "devDependencies": {
+        "@infinite-canvas/plugin-sdk": "file:../sdk",
+        "@types/react": "19.1.12",
+        "typescript": "^5"
+    }
+}

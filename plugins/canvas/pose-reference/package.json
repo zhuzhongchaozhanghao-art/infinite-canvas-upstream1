@@ -1,0 +1,21 @@
+{
+    "name": "canvas-plugin-pose-reference",
+    "version": "1.2.0",
+    "private": true,
+    "type": "module",
+    "description": "Infinite Canvas 姿势参考节点插件：用另一张图片的姿势重拍人物",
+    "scripts": {
+        "build": "node build.mjs",
+        "dev": "node build.mjs --watch",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "three": "0.180.0"
+    },
+    "devDependencies": {
+        "@infinite-canvas/plugin-sdk": "file:../sdk",
+        "@types/react": "19.1.12",
+        "@types/three": "0.180.0",
+        "typescript": "^5"
+    }
+}
