@@ -9,6 +9,9 @@ import { PromptSourceContentModal } from "./prompt-source-content-modal";
 import { fetchPromptSourceStatuses, refreshAllSources, refreshSource } from "@/services/api/prompts";
 import { PROMPT_SOURCE_INTERVALS, usePromptSourceStore } from "@/stores/use-prompt-source-store";
 import type { PromptSource } from "@/services/api/prompt-source-presets";
+import { AddPersonalPromptButton } from "@/components/prompts/personal-prompt-editor";
+import { PERSONAL_SOURCE_ID } from "@/lib/personal-prompts";
+import { usePersonalPrompts } from "@/components/prompts/use-personal-prompts";
 
 const STATUS_QUERY_KEY = ["prompt-source-statuses"];
 
@@ -31,6 +34,7 @@ export function ConfigPromptSources() {
     const [refreshingAll, setRefreshingAll] = useState(false);
     const viewingSource = sources.find((item) => item.id === viewingId) || null;
     const intervalOptions = PROMPT_SOURCE_INTERVALS.map((value) => ({ value, label: t(`config.promptSources.intervals.${intervalKey(value)}`) }));
+    const personal = usePersonalPrompts();
 
     const invalidatePrompts = async () => {
         await Promise.all([
@@ -91,12 +95,17 @@ export function ConfigPromptSources() {
     return (
         <div>
             <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+                <AddPersonalPromptButton />
                 <Button type="primary" icon={<Plus className="size-4" />} onClick={() => setEditingSource(addSource())}>
                     {t("config.promptSources.add")}
                 </Button>
             </div>
 
             <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-200 px-4 py-3 dark:border-stone-800">
+                    <div className="min-w-0 flex-1"><div className="font-semibold">{t("personalPrompts.mine")} · {personal.data?.items.length ?? 0}</div><p className="mt-1 text-xs opacity-60">{t("personalPrompts.localNote")}</p>{personal.error ? <p role="alert" className="text-red-500">{t("personalPrompts.failed")}</p> : null}</div>
+                    <Button size="small" icon={<Eye className="size-3.5" />} onClick={() => setViewingId(PERSONAL_SOURCE_ID)}>{t("config.promptSources.view")}</Button>
+                </div>
                 {sources.map((source) => {
                     const status = statusQuery.data?.[source.id];
                     return (
@@ -147,7 +156,7 @@ export function ConfigPromptSources() {
             </section>
 
             <PromptSourceEditorDrawer open={Boolean(editingSource)} source={editingSource} onSave={handleSave} onClose={() => setEditingSource(null)} />
-            <PromptSourceContentModal source={viewingSource} onClose={() => setViewingId("")} />
+            <PromptSourceContentModal source={viewingId === PERSONAL_SOURCE_ID ? { id: PERSONAL_SOURCE_ID, name: t("personalPrompts.mine"), url: "", homepage: "", enabled: true, builtIn: false } : viewingSource} onClose={() => setViewingId("")} />
         </div>
     );
 }

@@ -7,6 +7,8 @@ import { ALL_PROMPTS_OPTION } from "@/services/api/prompts";
 import { cn } from "@/lib/utils";
 import { PromptCard } from "./prompt-card";
 import { usePromptList } from "./use-prompt-list";
+import { PERSONAL_SOURCE_ID } from "@/lib/personal-prompts";
+import { AddPersonalPromptButton } from "./personal-prompt-editor";
 
 export function PromptSelectDialog({ open, onOpenChange, onSelect }: { open: boolean; onOpenChange: (open: boolean) => void; onSelect: (prompt: string) => void }) {
     const { message } = App.useApp();
@@ -41,7 +43,7 @@ export function PromptSelectDialog({ open, onOpenChange, onSelect }: { open: boo
                     <div className="flex flex-wrap gap-1.5">
                         {promptCategories.map((category) => (
                             <Tag.CheckableTag key={category} checked={selectedCategory === category} className={cn("prompt-filter-tag", selectedCategory === category && "is-active")} onChange={() => setSelectedCategory(category)}>
-                                {category === ALL_PROMPTS_OPTION ? t("common.all") : category}
+                                {category === ALL_PROMPTS_OPTION ? t("common.all") : category === PERSONAL_SOURCE_ID ? t("personalPrompts.mine") : category}
                             </Tag.CheckableTag>
                         ))}
                     </div>
@@ -58,7 +60,7 @@ export function PromptSelectDialog({ open, onOpenChange, onSelect }: { open: boo
                     </div>
                 </aside>
                 <section className="flex min-h-0 min-w-0 flex-col">
-                    <Input size="large" prefix={<Search className="size-4 text-stone-400" />} value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={t("prompts.searchTitle")} />
+                    <div className="flex items-center gap-2"><Input size="large" prefix={<Search className="size-4 text-stone-400" />} value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={t("prompts.searchTitle")} /><AddPersonalPromptButton compact /></div>
                     <div className="thin-scrollbar mt-4 min-h-0 flex-1 overflow-y-auto pr-2" data-canvas-no-zoom onScroll={handleListScroll} onWheelCapture={(event) => event.stopPropagation()}>
                         {query.isLoading ? (
                             <div className="flex h-40 items-center justify-center">
@@ -67,7 +69,7 @@ export function PromptSelectDialog({ open, onOpenChange, onSelect }: { open: boo
                         ) : null}
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                             {items.map((item) => (
-                                <PromptCard key={item.id} item={item} onOpen={() => selectPrompt(item.prompt)} onCopy={() => selectPrompt(item.prompt)} compact />
+                                <PromptCard key={`${item.sourceId}:${item.id}`} item={item} onOpen={() => selectPrompt(item.prompt)} onCopy={() => selectPrompt(item.prompt)} compact />
                             ))}
                         </div>
                         {!query.isLoading && items.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("prompts.empty")} className="py-8" /> : null}

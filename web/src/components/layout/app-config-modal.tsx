@@ -87,8 +87,9 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
 
     const loadConfigFile = async (file: File) => {
         try {
-            await importAppConfig(file);
-            message.success(t("config.imported"));
+            const result = await importAppConfig(file);
+            if (result.conflicts) message.warning(t("personalPrompts.importConflicts", { count: result.conflicts }));
+            else message.success(t("config.imported"));
         } catch (error) {
             message.error(error instanceof Error ? error.message : t("config.importFailed"));
         } finally {
@@ -174,7 +175,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                     <Button icon={<Upload className="size-4" />} onClick={() => configInputRef.current?.click()}>
                         {t("config.import")}
                     </Button>
-                    <Button icon={<Download className="size-4" />} onClick={exportAppConfig}>
+                    <Button icon={<Download className="size-4" />} onClick={() => void exportAppConfig().catch(() => message.error(t("personalPrompts.exportFailed")))}>
                         {t("config.export")}
                     </Button>
                     <input ref={configInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => event.target.files?.[0] && void loadConfigFile(event.target.files[0])} />

@@ -3,9 +3,16 @@ import { Button, Modal, Space, Tag } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { formatPromptDate, type Prompt } from "@/services/api/prompts";
+import { usePersonalPrompts } from "@/components/prompts/use-personal-prompts";
+import { PERSONAL_SOURCE_ID, promptIdentity } from "@/lib/personal-prompts";
+import { PersonalPromptActions } from "@/components/prompts/personal-prompt-actions";
 
-export function PromptDetailDialog({ prompt, onClose, onCopy, onSaveAsset }: { prompt: Prompt | null; onClose: () => void; onCopy: (prompt: string) => void; onSaveAsset?: (prompt: Prompt) => void }) {
+export function PromptDetailDialog({ prompt: selectedPrompt, onClose, onCopy, onSaveAsset }: { prompt: Prompt | null; onClose: () => void; onCopy: (prompt: string) => void; onSaveAsset?: (prompt: Prompt) => void }) {
     const { i18n, t } = useTranslation();
+    const personal = usePersonalPrompts();
+    const local = personal.data?.items.find((item) => item.id === selectedPrompt?.id);
+    const current = selectedPrompt?.sourceId === PERSONAL_SOURCE_ID && personal.data ? (local ? { ...selectedPrompt, ...local } : null) : selectedPrompt;
+    const prompt = current ? { ...current, pinnedAt: personal.data?.pins[promptIdentity(current.sourceId, current.id)] } : null;
 
     return (
         <Modal title={prompt?.title} open={Boolean(prompt)} onCancel={onClose} footer={null} width={720} centered styles={{ body: { height: "calc(85vh - 55px)", overflow: "hidden" } }}>
@@ -30,6 +37,7 @@ export function PromptDetailDialog({ prompt, onClose, onCopy, onSaveAsset }: { p
                     </div>
                     <div className="shrink-0 pt-4">
                         <Space wrap>
+                            <PersonalPromptActions item={prompt} />
                             <Button type="primary" icon={<Copy className="size-4" />} onClick={() => onCopy(prompt.prompt)}>
                                 {t("common.copyPrompt")}
                             </Button>

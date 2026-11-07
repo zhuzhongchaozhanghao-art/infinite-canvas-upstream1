@@ -8,6 +8,10 @@ import { useCopyText } from "@/hooks/use-copy-text";
 import { useAssetStore } from "@/stores/use-asset-store";
 import { fetchSourcePrompts, refreshSource, type Prompt } from "@/services/api/prompts";
 import type { PromptSource } from "@/services/api/prompt-source-presets";
+import { PERSONAL_SOURCE_ID } from "@/lib/personal-prompts";
+import { usePersonalPromptsRevision } from "@/components/prompts/use-personal-prompts";
+import { PersonalPromptActions } from "@/components/prompts/personal-prompt-actions";
+import { AddPersonalPromptButton } from "@/components/prompts/personal-prompt-editor";
 
 export function PromptSourceContentModal({ source, onClose }: { source: PromptSource | null; onClose: () => void }) {
     const { message } = App.useApp();
@@ -17,13 +21,14 @@ export function PromptSourceContentModal({ source, onClose }: { source: PromptSo
     const [detail, setDetail] = useState<Prompt | null>(null);
     const copyText = useCopyText();
     const addAsset = useAssetStore((state) => state.addAsset);
+    const personalRevision = usePersonalPromptsRevision();
 
     const load = useCallback(
         async (force: boolean) => {
             if (!source) return;
             setLoading(true);
             try {
-                setItems(force ? await refreshSourceItems(source.id) : await fetchSourcePrompts(source.id));
+                setItems(force && source.id !== PERSONAL_SOURCE_ID ? await refreshSourceItems(source.id) : await fetchSourcePrompts(source.id));
             } catch (error) {
                 message.error(error instanceof Error ? error.message : t("config.promptSources.content.loadFailed"));
             } finally {
@@ -36,7 +41,7 @@ export function PromptSourceContentModal({ source, onClose }: { source: PromptSo
     useEffect(() => {
         if (source) void load(false);
         else setItems([]);
-    }, [source, load]);
+    }, [source, load, personalRevision]);
 
     const saveAsset = (item: Prompt) => {
         addAsset({ kind: "text", title: item.title, coverUrl: item.coverUrl, tags: item.tags, source: item.category, data: { content: item.prompt }, metadata: { source: "prompt-library", promptId: item.id, githubUrl: item.githubUrl } });
@@ -56,9 +61,9 @@ export function PromptSourceContentModal({ source, onClose }: { source: PromptSo
                             <div className="text-base font-semibold">{t("config.promptSources.content.title", { name: source?.name || "" })}</div>
                             <div className="mt-0.5 text-xs font-normal text-stone-500">{t("config.promptSources.content.count", { count: items.length })}</div>
                         </div>
-                        <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loading} onClick={() => void load(true)}>
+                        {source?.id === PERSONAL_SOURCE_ID ? <AddPersonalPromptButton compact /> : <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loading} onClick={() => void load(true)}>
                             {t("config.promptSources.content.refresh")}
-                        </Button>
+                        </Button>}
                     </div>
                 }
             >
@@ -106,6 +111,7 @@ export function PromptSourceContentModal({ source, onClose }: { source: PromptSo
                             width: 210,
                             render: (_, item) => (
                                 <Space size={4} wrap>
+                                    <PersonalPromptActions item={item} />
                                     <Button size="small" type="text" icon={<Copy className="size-3.5" />} onClick={() => copyText(item.prompt, t("common.promptCopied"))}>
                                         {t("common.copy")}
                                     </Button>

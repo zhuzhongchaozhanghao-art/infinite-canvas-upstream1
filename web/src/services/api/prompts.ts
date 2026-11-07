@@ -4,12 +4,19 @@ import { runPromptSource, type RawPrompt } from "./prompt-source-runtime";
 import { usePromptSourceStore } from "@/stores/use-prompt-source-store";
 import i18n from "@/i18n";
 import type { PromptSource } from "./prompt-source-presets";
+import { readPersonalPrompts } from "@/services/personal-prompts";
+import { PERSONAL_SOURCE_ID, promptIdentity, sortPinnedPrompts, type PersonalPrompt } from "@/lib/personal-prompts";
 
 export type Prompt = RawPrompt & {
     sourceId: string;
     category: string;
     githubUrl: string;
+    pinnedAt?: number;
 };
+
+function personalPrompt(item: PersonalPrompt): Prompt {
+    return { ...item, sourceId: PERSONAL_SOURCE_ID, category: PERSONAL_SOURCE_ID, githubUrl: "", description: "", referenceImageUrls: [], preview: "" };
+}
 
 export const ALL_PROMPTS_OPTION = "all";
 
@@ -137,13 +144,14 @@ async function getAllPrompts(): Promise<Prompt[]> {
 }
 
 export async function fetchPrompts({ keyword = "", tag = [], category = ALL_PROMPTS_OPTION, page = 1, pageSize = 20 }: { keyword?: string; tag?: string[]; category?: string; page?: number; pageSize?: number } = {}) {
-    const items = await getAllPrompts();
+    const library = await readPersonalPrompts();
+    const items = [...library.items.map(personalPrompt), ...(category === PERSONAL_SOURCE_ID ? [] : await getAllPrompts())];
     const normalizedKeyword = keyword.trim().toLowerCase();
     const normalizedPage = Math.max(1, page);
     const normalizedPageSize = Math.max(1, Math.min(100, pageSize));
     const withoutTagFilter = filterPrompts(items, { keyword: normalizedKeyword, category, tags: [] });
-    const filtered = filterPrompts(items, { keyword: normalizedKeyword, category, tags: tag });
-    const categories = enabledSources().map((source) => source.name);
+    const filtered = sortPinnedPrompts(filterPrompts(items, { keyword: normalizedKeyword, category, tags: tag }), library.pins).map((item) => ({ ...item, pinnedAt: library.pins[promptIdentity(item.sourceId, item.id)] }));
+    const categories = [PERSONAL_SOURCE_ID, ...enabledSources().map((source) => source.name)];
 
     return {
         items: filtered.slice((normalizedPage - 1) * normalizedPageSize, normalizedPage * normalizedPageSize),
@@ -154,9 +162,11 @@ export async function fetchPrompts({ keyword = "", tag = [], category = ALL_PROM
 }
 
 export async function fetchSourcePrompts(sourceId: string): Promise<Prompt[]> {
+    const library = await readPersonalPrompts();
+    if (sourceId === PERSONAL_SOURCE_ID) return sortPinnedPrompts(library.items.map(personalPrompt), library.pins).map((item) => ({ ...item, pinnedAt: library.pins[promptIdentity(item.sourceId, item.id)] }));
     const source = usePromptSourceStore.getState().sources.find((item) => item.id === sourceId);
     if (!source) throw new Error(i18n.t("prompts.sourceMissing"));
-    return getSourcePrompts(source);
+    return sortPinnedPrompts(await getSourcePrompts(source), library.pins).map((item) => ({ ...item, pinnedAt: library.pins[promptIdentity(item.sourceId, item.id)] }));
 }
 
 export async function refreshSource(sourceId: string): Promise<PromptSourceRefreshResult> {

@@ -20,6 +20,10 @@ import { CANVAS_SIDE_PANEL_MAX_WIDTH, CANVAS_SIDE_PANEL_MIN_WIDTH, CANVAS_SIDE_P
 import { CanvasNodeType, type CanvasNodeData } from "@/types/canvas";
 
 import type { InsertAssetPayload } from "./asset-picker-modal";
+import { PERSONAL_SOURCE_ID } from "@/lib/personal-prompts";
+import { AddPersonalPromptButton } from "@/components/prompts/personal-prompt-editor";
+import { PersonalPromptActions } from "@/components/prompts/personal-prompt-actions";
+import { usePersonalPromptsRevision } from "@/components/prompts/use-personal-prompts";
 
 const PANEL_MOTION_SECONDS = CANVAS_SIDE_PANEL_MOTION_MS / 1000;
 const PANEL_EASE = [0.22, 1, 0.36, 1] as const;
@@ -550,9 +554,9 @@ const CanvasPromptsTab = memo(function CanvasPromptsTab({ onInsert, theme }: { o
     const { message } = App.useApp();
     const { t } = useTranslation();
     const sources = usePromptSourceStore((state) => state.sources);
-    const enabledSources = useMemo(() => sources.filter((source) => source.enabled), [sources]);
+    const enabledSources = useMemo(() => [{ id: PERSONAL_SOURCE_ID, name: t("personalPrompts.mine") }, ...sources.filter((source) => source.enabled)], [sources, t]);
     const [keyword, setKeyword] = useState("");
-    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({ [PERSONAL_SOURCE_ID]: true });
     const [detail, setDetail] = useState<Prompt | null>(null);
 
     const copyPrompt = async (prompt: string) => {
@@ -567,6 +571,7 @@ const CanvasPromptsTab = memo(function CanvasPromptsTab({ onInsert, theme }: { o
     return (
         <div className="flex h-full flex-col">
             <div className="px-3 pb-2.5 pt-1">
+                <div className="mb-2 flex justify-end"><AddPersonalPromptButton compact /></div>
                 <Input size="small" allowClear prefix={<Search className="size-3.5 text-stone-400" />} placeholder={t("canvas.sidePanel.searchPrompts")} value={keyword} onChange={(e) => setKeyword(e.target.value)} />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
@@ -613,7 +618,8 @@ function PromptSourceGroup({
     const { t } = useTranslation();
     // Cache a source after its first expansion to avoid repeated requests; search results also need the data for counts.
     const showResults = open || !!keyword.trim();
-    const query = useQuery({ queryKey: ["side-panel-prompts", sourceId], queryFn: () => fetchSourcePrompts(sourceId), enabled: showResults, staleTime: 1000 * 60 * 60 });
+    const personalRevision = usePersonalPromptsRevision();
+    const query = useQuery({ queryKey: ["side-panel-prompts", sourceId, personalRevision], queryFn: () => fetchSourcePrompts(sourceId), enabled: showResults, staleTime: 1000 * 60 * 60 });
 
     const filtered = useMemo(() => {
         const items = query.data || [];
@@ -673,6 +679,7 @@ function PromptRow({ item, theme, onInsert, onView }: { item: Prompt; theme: Can
                 <div className="mt-0.5 truncate text-xs leading-snug opacity-50">{item.prompt}</div>
             </button>
             <div className="flex shrink-0 flex-col items-center gap-0.5">
+                <PersonalPromptActions item={item} />
                 <button type="button" onClick={onView} className="grid size-6 place-items-center rounded-md opacity-60 transition hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10" aria-label={t("canvas.sidePanel.viewDetails")} title={t("canvas.sidePanel.viewDetails")}>
                     <Eye className="size-3.5" />
                 </button>

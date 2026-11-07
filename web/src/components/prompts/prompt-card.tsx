@@ -4,6 +4,7 @@ import { Button, Card, Tag } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { formatPromptDate, type Prompt } from "@/services/api/prompts";
+import { PersonalPromptActions } from "./personal-prompt-actions";
 
 export function PromptCard({
     item,
@@ -26,6 +27,7 @@ export function PromptCard({
 }) {
     const { i18n, t } = useTranslation();
     return (
+        <div className="relative h-full">
         <Card
             hoverable
             className={compact ? "group cursor-pointer overflow-hidden transition-transform duration-200 hover:-translate-y-1" : "flex h-full flex-col overflow-hidden"}
@@ -47,5 +49,7 @@ export function PromptCard({
             </button>
             {!compact ? <div className="mt-auto flex items-center gap-2 px-4 pb-4"><Button block={actionType === "primary"} type={actionType} size="small" icon={actionIcon} onClick={onCopy}>{actionLabel || t("common.copy")}</Button>{extraAction}</div> : null}
         </Card>
+        <div className="absolute right-1 top-1 rounded-md bg-background/90"><PersonalPromptActions item={item} /></div>
+        </div>
     );
 }
