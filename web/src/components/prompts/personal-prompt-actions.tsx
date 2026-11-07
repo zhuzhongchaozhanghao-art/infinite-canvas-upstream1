@@ -2,15 +2,14 @@ import { useState } from "react";
 import { App, Button, Popconfirm, Tooltip } from "antd";
 import { Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { PERSONAL_SOURCE_ID, type PersonalPrompt } from "@/lib/personal-prompts";
+import { PERSONAL_SOURCE_ID } from "@/lib/personal-prompts";
 import { deletePersonalPrompt, readPersonalPrompts, togglePromptPin } from "@/services/personal-prompts";
 import type { Prompt } from "@/services/api/prompts";
-import { PersonalPromptEditor } from "./personal-prompt-editor";
+import { openPersonalPromptEditor } from "./personal-prompt-editor";
 
 export function PersonalPromptActions({ item }: { item: Prompt }) {
     const { t } = useTranslation();
     const { message } = App.useApp();
-    const [editing, setEditing] = useState<PersonalPrompt | null>(null);
     const [busy, setBusy] = useState(false);
     const run = async (action: "pin" | "edit" | "delete") => {
         setBusy(true);
@@ -19,7 +18,7 @@ export function PersonalPromptActions({ item }: { item: Prompt }) {
             else {
                 const original = (await readPersonalPrompts()).items.find((record) => record.id === item.id);
                 if (!original || original.updatedAt !== item.updatedAt) throw new Error("personalPrompts.editConflict");
-                if (action === "edit") setEditing(original);
+                if (action === "edit") openPersonalPromptEditor(original);
                 else {
                     await deletePersonalPrompt(original);
                     message.success(t("personalPrompts.deleted"));
@@ -52,7 +51,6 @@ export function PersonalPromptActions({ item }: { item: Prompt }) {
                     </Popconfirm>
                 </>
             ) : null}
-            {editing ? <PersonalPromptEditor original={editing} onClose={() => setEditing(null)} /> : null}
         </div>
     );
 }

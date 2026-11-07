@@ -14,6 +14,7 @@ import type { AppLocale } from "@/i18n";
 import { getAntThemeConfig } from "@/lib/app-theme";
 import { buildThemeCssVars } from "@/lib/theme-presets";
 import { useActiveTheme, useThemeStore } from "@/stores/use-theme-store";
+import { PersonalPromptEditorHost } from "@/components/prompts/personal-prompt-editor";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -58,6 +59,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
                 <App>
                     <QueryClientProvider client={queryClient}>
                         <ClientRootInit>{children}</ClientRootInit>
+                        <PersonalPromptEditorHost />
                     </QueryClientProvider>
                 </App>
             </ProConfigProvider>

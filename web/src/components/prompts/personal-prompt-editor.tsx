@@ -2,10 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { App, Button, Input, Modal } from "antd";
 import { ImagePlus, Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { create } from "zustand";
+import { nanoid } from "nanoid";
 import { createImageThumbnail } from "@/lib/image-thumbnail";
 import { readFileAsDataUrl } from "@/lib/image-utils";
 import type { PersonalPrompt } from "@/lib/personal-prompts";
 import { savePersonalPrompt } from "@/services/personal-prompts";
+
+// Keep the editor outside result lists: a refresh, pin, or deletion in another
+// tab must never unmount an in-progress draft.
+const useEditorSession = create<{ session: { id: string; original?: PersonalPrompt } | null }>(() => ({ session: null }));
+export function openPersonalPromptEditor(original?: PersonalPrompt) {
+    useEditorSession.setState({ session: { id: nanoid(), original } });
+}
+export function PersonalPromptEditorHost() {
+    const session = useEditorSession((state) => state.session);
+    return session ? <PersonalPromptEditor key={session.id} original={session.original} onClose={() => useEditorSession.setState({ session: null })} /> : null;
+}
 
 export function PersonalPromptEditor({ original, onClose }: { original?: PersonalPrompt; onClose: () => void }) {
     const { t } = useTranslation();
@@ -141,13 +154,11 @@ export function PersonalPromptEditor({ original, onClose }: { original?: Persona
 
 export function AddPersonalPromptButton({ compact = false }: { compact?: boolean }) {
     const { t } = useTranslation();
-    const [open, setOpen] = useState(false);
     return (
         <>
-            <Button size={compact ? "small" : "middle"} icon={<Plus className="size-4" />} onClick={() => setOpen(true)}>
+            <Button size={compact ? "small" : "middle"} icon={<Plus className="size-4" />} onClick={() => openPersonalPromptEditor()}>
                 {t("personalPrompts.add")}
             </Button>
-            {open ? <PersonalPromptEditor onClose={() => setOpen(false)} /> : null}
         </>
     );
 }
