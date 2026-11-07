@@ -41,8 +41,8 @@ export function PromptSelectDialog({ open, onOpenChange, onSelect }: { open: boo
                 <aside className="thin-scrollbar min-h-0 overflow-y-auto border-r border-stone-200 pr-4 dark:border-stone-800">
                     <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">{t("prompts.category")}</div>
                     <div className="flex flex-wrap gap-1.5">
-                        {promptCategories.map((category) => (
-                            <Tag.CheckableTag key={category} checked={selectedCategory === category} className={cn("prompt-filter-tag", selectedCategory === category && "is-active")} onChange={() => setSelectedCategory(category)}>
+                        {(selectedCategory === PERSONAL_SOURCE_ID ? [ALL_PROMPTS_OPTION, PERSONAL_SOURCE_ID] : promptCategories).map((category) => (
+                            <Tag.CheckableTag key={category} checked={selectedCategory === category} className={cn("prompt-filter-tag", selectedCategory === category && "is-active")} onChange={() => { setSelectedCategory(category); setSelectedTags([]); }}>
                                 {category === ALL_PROMPTS_OPTION ? t("common.all") : category === PERSONAL_SOURCE_ID ? t("personalPrompts.mine") : category}
                             </Tag.CheckableTag>
                         ))}

@@ -154,11 +154,20 @@ export function PersonalPromptEditor({ original, onClose }: { original?: Persona
 
 export function AddPersonalPromptButton({ compact = false }: { compact?: boolean }) {
     const { t } = useTranslation();
+    if (compact) return (
+        <button
+            type="button"
+            aria-label={t("personalPrompts.add")}
+            onClick={() => openPersonalPromptEditor()}
+            className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-white/10"
+        >
+            <Plus className="size-3.5" />
+            {t("canvas.sidePanel.add")}
+        </button>
+    );
     return (
-        <>
-            <Button size={compact ? "small" : "middle"} icon={<Plus className="size-4" />} onClick={() => openPersonalPromptEditor()}>
-                {t("personalPrompts.add")}
-            </Button>
-        </>
+        <Button icon={<Plus className="size-4" />} onClick={() => openPersonalPromptEditor()}>
+            {t("personalPrompts.add")}
+        </Button>
     );
 }

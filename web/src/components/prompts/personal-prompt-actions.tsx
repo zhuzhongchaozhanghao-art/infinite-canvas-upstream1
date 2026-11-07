@@ -7,7 +7,7 @@ import { deletePersonalPrompt, readPersonalPrompts, togglePromptPin } from "@/se
 import type { Prompt } from "@/services/api/prompts";
 import { openPersonalPromptEditor } from "./personal-prompt-editor";
 
-export function PersonalPromptActions({ item }: { item: Prompt }) {
+export function PersonalPromptActions({ item, management = false }: { item: Prompt; management?: boolean }) {
     const { t } = useTranslation();
     const { message } = App.useApp();
     const [busy, setBusy] = useState(false);
@@ -43,7 +43,7 @@ export function PersonalPromptActions({ item }: { item: Prompt }) {
                     onClick={() => void run("pin")}
                 />
             </Tooltip>
-            {item.sourceId === PERSONAL_SOURCE_ID ? (
+            {management && item.sourceId === PERSONAL_SOURCE_ID ? (
                 <>
                     <Button type="text" size="small" aria-label={t("personalPrompts.edit")} disabled={busy} icon={<Pencil className="size-3.5" />} onClick={() => void run("edit")} />
                     <Popconfirm title={t("personalPrompts.deleteTitle")} okText={t("personalPrompts.delete")} cancelText={t("personalPrompts.cancel")} onConfirm={() => run("delete")}>

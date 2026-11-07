@@ -21,6 +21,8 @@
 
 ## 前端规范
 
+- 新增或调整 UI 时先复用同区域已有组件、布局、间距和交互；例如提示词添加入口复用资产搜索栏的行内扁平按钮，避免另造按钮风格或堆叠重复操作。
+
 - 前端使用 Vite、React、React Router、TypeScript、Ant Design、Tailwind、Zustand。
 - 编写 Ant Design 相关代码时，参考 https://ant.design/llms-full.txt 理解组件 API、示例和设计规范，并优先结合项目当前 antd 版本与既有写法。
 - 外部服务请求统一放在 `web/src/services/api/`，由浏览器前端直连，不假设存在项目后端。

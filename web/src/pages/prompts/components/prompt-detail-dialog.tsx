@@ -37,7 +37,7 @@ export function PromptDetailDialog({ prompt: selectedPrompt, onClose, onCopy, on
                     </div>
                     <div className="shrink-0 pt-4">
                         <Space wrap>
-                            <PersonalPromptActions item={prompt} />
+                            <PersonalPromptActions item={prompt} management />
                             <Button type="primary" icon={<Copy className="size-4" />} onClick={() => onCopy(prompt.prompt)}>
                                 {t("common.copyPrompt")}
                             </Button>

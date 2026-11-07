@@ -570,9 +570,9 @@ const CanvasPromptsTab = memo(function CanvasPromptsTab({ onInsert, theme }: { o
 
     return (
         <div className="flex h-full flex-col">
-            <div className="px-3 pb-2.5 pt-1">
-                <div className="mb-2 flex justify-end"><AddPersonalPromptButton compact /></div>
+            <div className="flex items-center gap-2 px-3 pb-2 pt-1">
                 <Input size="small" allowClear prefix={<Search className="size-3.5 text-stone-400" />} placeholder={t("canvas.sidePanel.searchPrompts")} value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+                <AddPersonalPromptButton compact />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
                 <div className="space-y-1">
@@ -667,22 +667,21 @@ function PromptRow({ item, theme, onInsert, onView }: { item: Prompt; theme: Can
     const { t } = useTranslation();
     return (
         <div className="group relative flex items-center gap-2.5 rounded-lg px-2 py-2 transition hover:bg-black/5 dark:hover:bg-white/5">
-            {item.coverUrl ? (
-                <img src={item.coverUrl} alt="" className="size-10 shrink-0 rounded-md object-cover" loading="lazy" />
-            ) : (
-                <span className="grid size-10 shrink-0 place-items-center rounded-md" style={{ background: theme.node.panel }}>
-                    <FileText className="size-4 opacity-50" />
+            <button type="button" onClick={onView} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+                {item.coverUrl ? (
+                    <img src={item.coverUrl} alt="" className="size-10 shrink-0 rounded-md object-cover" loading="lazy" />
+                ) : (
+                    <span className="grid size-10 shrink-0 place-items-center rounded-md" style={{ background: theme.node.panel }}>
+                        <FileText className="size-4 opacity-50" />
+                    </span>
+                )}
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium leading-snug">{item.title}</span>
+                    <span className="mt-0.5 block truncate text-xs leading-snug opacity-50">{item.prompt}</span>
                 </span>
-            )}
-            <button type="button" onClick={onView} className="min-w-0 flex-1 text-left">
-                <div className="truncate text-sm font-medium leading-snug">{item.title}</div>
-                <div className="mt-0.5 truncate text-xs leading-snug opacity-50">{item.prompt}</div>
             </button>
-            <div className="flex shrink-0 flex-col items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5">
                 <PersonalPromptActions item={item} />
-                <button type="button" onClick={onView} className="grid size-6 place-items-center rounded-md opacity-60 transition hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10" aria-label={t("canvas.sidePanel.viewDetails")} title={t("canvas.sidePanel.viewDetails")}>
-                    <Eye className="size-3.5" />
-                </button>
                 <button
                     type="button"
                     onClick={onInsert}
