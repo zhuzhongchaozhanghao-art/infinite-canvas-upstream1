@@ -5,6 +5,8 @@ description: Implemented changes that still need manual verification
 
 # Pending Tests
 
+- 局部遮罩编辑：修复上游返回 R2 图片地址时遮罩导出触发跨域异常；Vercel、Vite 开发服务与 Docker 提供限定到公开 R2 generated 路径的同源读取。提交显示加载状态，读取失败保留涂抹和错误信息。真实付费生成仍待用户验收。
+
 The current release needs manual verification in these areas:
 
 - Windows 完整节点包：执行注册表 build:local 后再构建网页，检查 dist/plugins 包含 16 个插件 JS 与 index.json，节点管理可启用姿势参考、换角度、宫格、分镜等。仅完成入口与清单路径检查，未执行构建，待 Windows 实测。

@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
 import { parseChangelog } from "./src/lib/release";
+import { Readable } from "node:stream";
 
 const webDir = dirname(fileURLToPath(import.meta.url));
 const localVersion = readFileSync(resolve(webDir, "../VERSION"), "utf8").trim() || "dev";
@@ -27,6 +28,25 @@ function localPluginsManifest(): Plugin {
     return {
         name: "local-plugins-manifest",
         configureServer(server) {
+            server.middlewares.use(async (req, res, next) => {
+                const match = /^\/image-source\/(pub-[a-f0-9]{32})\/(generated\/[^#]*)$/.exec(req.url || "");
+                if (!match) return next();
+                if (req.method !== "GET" && req.method !== "HEAD") {
+                    res.writeHead(405).end();
+                    return;
+                }
+                try {
+                    const response = await fetch(`https://${match[1]}.r2.dev/${match[2]}`, { method: req.method, redirect: "error" });
+                    res.statusCode = response.status;
+                    res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+                    res.setHeader("X-Content-Type-Options", "nosniff");
+                    res.setHeader("Content-Type", response.headers.get("content-type") || "application/octet-stream");
+                    if (!response.body) return void res.end();
+                    Readable.fromWeb(response.body as import("node:stream/web").ReadableStream).on("error", () => res.destroy()).pipe(res);
+                } catch {
+                    res.writeHead(502).end();
+                }
+            });
             server.middlewares.use("/plugins/index.json", (_req, res) => {
                 res.setHeader("Content-Type", "application/json");
                 res.end(JSON.stringify(listLocalPlugins()));

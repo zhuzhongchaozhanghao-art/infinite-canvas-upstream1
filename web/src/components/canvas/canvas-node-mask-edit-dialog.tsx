@@ -5,6 +5,7 @@ import { Brush, Eraser, ImagePlus, Redo2, RotateCcw, Undo2, WandSparkles, ZoomIn
 import { useTranslation } from "react-i18next";
 
 import { readImageMeta } from "@/lib/image-utils";
+import { imageToDataUrl } from "@/services/image-storage";
 import { useImageEditorViewport } from "@/components/canvas/use-image-editor-viewport";
 
 export type CanvasImageMaskEditPayload = {
@@ -22,7 +23,7 @@ const defaultBrushSize = 100;
 const maskOverlayColor = "#2563eb";
 const maskOverlayAlpha = 0.4;
 
-export function CanvasNodeMaskEditDialog({ dataUrl, open, onClose, onConfirm }: { dataUrl: string; open: boolean; onClose: () => void; onConfirm: (payload: CanvasImageMaskEditPayload) => void }) {
+export function CanvasNodeMaskEditDialog({ dataUrl, open, onClose, onConfirm }: { dataUrl: string; open: boolean; onClose: () => void; onConfirm: (payload: CanvasImageMaskEditPayload) => void | Promise<void> }) {
     const { t } = useTranslation();
     const maskCanvasRef = useRef<HTMLCanvasElement>(null);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,6 +37,7 @@ export function CanvasNodeMaskEditDialog({ dataUrl, open, onClose, onConfirm }: 
     const [brushSize, setBrushSize] = useState(defaultBrushSize);
     const [mode, setMode] = useState<DrawMode>("paint");
     const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
     const [historySize, setHistorySize] = useState(0);
     const [redoSize, setRedoSize] = useState(0);
     const [brushPreview, setBrushPreview] = useState<BrushPreview | null>(null);
@@ -203,14 +205,27 @@ export function CanvasNodeMaskEditDialog({ dataUrl, open, onClose, onConfirm }: 
         return () => window.removeEventListener("keydown", handleKeyDown, true);
     }, [open, redoMask, undoMask]);
 
-    const submit = (generate: boolean) => {
+    const submit = async (generate: boolean) => {
+        if (submitting) return;
         const nextPrompt = prompt.trim();
         const canvas = maskCanvasRef.current;
         const element = imageRef.current;
         if (!nextPrompt) return setError(t("canvas.editors.maskPromptRequired"));
         if (!canvas || !element) return;
         if (!canvasHasPaint(canvas)) return setError(t("canvas.editors.maskRequired"));
-        onConfirm({ prompt: nextPrompt, maskDataUrl: buildMaskOverlay(element, canvas), generate });
+        setSubmitting(true);
+        setError("");
+        try {
+            // Never draw the display-only remote <img> into an export canvas.
+            const source = new Image();
+            source.src = await imageToDataUrl({ dataUrl });
+            await source.decode();
+            await onConfirm({ prompt: nextPrompt, maskDataUrl: buildMaskOverlay(source, canvas), generate });
+        } catch (error) {
+            setError(error instanceof Error ? error.message : t("canvas.projectPage.maskFailed"));
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -326,10 +341,10 @@ export function CanvasNodeMaskEditDialog({ dataUrl, open, onClose, onConfirm }: 
                             {t("canvas.editors.reset")}
                         </Button>
                         <div className="flex items-center gap-2">
-                            <Button icon={<ImagePlus className="size-4" />} onClick={() => submit(false)}>
+                            <Button disabled={submitting} icon={<ImagePlus className="size-4" />} onClick={() => void submit(false)}>
                                 {t("canvas.editors.maskExport")}
                             </Button>
-                            <Button type="primary" icon={<WandSparkles className="size-4" />} onClick={() => submit(true)}>
+                            <Button type="primary" loading={submitting} icon={<WandSparkles className="size-4" />} onClick={() => void submit(true)}>
                                 {t("canvas.editors.maskGenerate")}
                             </Button>
                         </div>
