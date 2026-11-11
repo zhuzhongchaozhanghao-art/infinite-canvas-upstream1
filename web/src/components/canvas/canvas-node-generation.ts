@@ -180,6 +180,23 @@ export async function hydrateNodeGenerationContext(context: NodeGenerationContex
     return { ...context, referenceImages: await Promise.all(context.referenceImages.map(async (image) => ({ ...image, dataUrl: await imageToDataUrl(image) }))) };
 }
 
+export function getImageGenerationReferences(references: ReferenceImage[], node: CanvasNodeData | undefined, overwrite: boolean) {
+    const ownImage = !overwrite && node ? readReferenceImage(node) : null;
+    // 连接图在前，节点自身作为最后一张参考图。
+    return [...new Map((ownImage ? [...references, ownImage] : references).map((image) => [image.id, image])).values()];
+}
+
+export async function readReferenceImageRatio(dataUrl: string, storageKey?: string) {
+    const image = new Image();
+    if (!dataUrl.startsWith("data:")) {
+        const { imageToDataUrl } = await import("@/services/image-storage");
+        dataUrl = await imageToDataUrl({ dataUrl, storageKey });
+    }
+    image.src = dataUrl;
+    await image.decode();
+    return `${image.naturalWidth}:${image.naturalHeight}`;
+}
+
 function readNodeTextInput(node: CanvasNodeData) {
     if (node.type === CanvasNodeType.Text) return node.metadata?.content || node.metadata?.prompt || "";
     return node.metadata?.prompt || "";

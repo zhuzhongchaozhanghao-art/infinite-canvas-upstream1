@@ -20,7 +20,7 @@ afterAll(() => {
 
 const { registerNodeDefinitions } = await import("../src/lib/canvas/node-registry");
 const { buildNodeMentionReferences } = await import("../src/lib/canvas/canvas-resource-references");
-const { buildNodeGenerationContext } = await import("../src/components/canvas/canvas-node-generation");
+const { buildNodeGenerationContext, getImageGenerationReferences } = await import("../src/components/canvas/canvas-node-generation");
 const { CanvasNodeType } = await import("../src/types/canvas");
 
 // 测试用插件节点：资源直接取 metadata.resource
@@ -77,6 +77,16 @@ test("generation context keeps a single-url plugin resource unchanged", () => {
     const context = buildNodeGenerationContext("t", nodes, connections, "生成");
     expect(context.referenceImages.length).toBe(1);
     expect(context.referenceImages[0].id).toBe("p");
+});
+
+test("image sizing follows the first image actually sent, including the node image when applicable", () => {
+    const { nodes, connections, target } = setup({ kind: "image", url: "data:image/png;base64,a" });
+    target.metadata = { content: "data:image/png;base64,b" };
+    const connected = buildNodeGenerationContext(target.id, nodes, connections, "生成").referenceImages;
+    expect(getImageGenerationReferences(connected, target, false).map(({ id }) => id)).toEqual(["p", "t"]);
+    expect(getImageGenerationReferences([], target, false).map(({ id }) => id)).toEqual(["t"]);
+    expect(getImageGenerationReferences(connected, target, true).map(({ id }) => id)).toEqual(["p"]);
+    expect(getImageGenerationReferences([], target, true)).toEqual([]);
 });
 
 test("reference bar expands plugin multi-image resources and keeps numbering continuous", async () => {

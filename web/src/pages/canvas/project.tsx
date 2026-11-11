@@ -10,7 +10,7 @@ import { useCanvasTheme } from "@/hooks/use-canvas-theme";
 import { requestEdit, requestGeneration, requestImageQuestion } from "@/services/api/image";
 import { requestAudioGeneration, storeGeneratedAudio } from "@/services/api/audio";
 import { createVideoGenerationTask, isVideoTaskFailed, storeGeneratedVideo, waitForVideoGenerationTask } from "@/services/api/video";
-import { defaultConfig, useConfigStore, useEffectiveConfig, type AiConfig } from "@/stores/use-config-store";
+import { defaultConfig, resolveModelRequestConfig, useConfigStore, useEffectiveConfig, type AiConfig } from "@/stores/use-config-store";
 import { ensureImagePreview, uploadImage } from "@/services/image-storage";
 import { uploadMediaFile, type UploadedFile } from "@/services/file-storage";
 import { nanoid } from "nanoid";
@@ -33,7 +33,8 @@ import { CanvasNodeCropDialog, type CanvasImageCropRect } from "@/components/can
 import { CanvasNodeMaskEditDialog, type CanvasImageMaskEditPayload } from "@/components/canvas/canvas-node-mask-edit-dialog";
 import { CanvasNodeSplitDialog, type CanvasImageSplitParams } from "@/components/canvas/canvas-node-split-dialog";
 import { CanvasNodeUpscaleDialog, type CanvasImageUpscaleParams } from "@/components/canvas/canvas-node-upscale-dialog";
-import { buildNodeGenerationContext, buildNodeGenerationInputs, buildNodeResponseMessages, hydrateNodeGenerationContext, type NodeGenerationInput } from "@/components/canvas/canvas-node-generation";
+import { buildNodeGenerationContext, buildNodeGenerationInputs, buildNodeResponseMessages, getImageGenerationReferences, hydrateNodeGenerationContext, readReferenceImageRatio, type NodeGenerationInput } from "@/components/canvas/canvas-node-generation";
+import { getImageSizingProfile, resolveImageSizing } from "@/lib/media-size";
 import { CanvasNodeHoverToolbar, CanvasNodeInfoModal } from "@/components/canvas/canvas-node-hover-toolbar";
 import { CanvasSelectionToolbar } from "@/components/canvas/canvas-selection-toolbar";
 import { InfiniteCanvas } from "@/components/canvas/infinite-canvas";
@@ -1863,6 +1864,8 @@ function InfiniteCanvasPage() {
                 generationType: node.metadata?.generationType,
                 model: node.metadata?.model,
                 size: node.metadata?.size,
+                imageSizing: node.metadata?.imageSizing,
+                imageRequestSizing: node.metadata?.imageRequestSizing,
                 quality: node.metadata?.quality,
                 background: node.metadata?.background,
                 references: node.metadata?.references,
@@ -2498,14 +2501,23 @@ function InfiniteCanvasPage() {
                     const isImageNode = sourceNode?.type === CanvasNodeType.Image;
                     const isEmptyImageNode = isImageNode && !sourceNode?.metadata?.content;
                     const reuseImageNode = isImageNode && (overwriteExisting || isEmptyImageNode);
-                    const sourceReference =
-                        isImageNode && sourceNode?.metadata?.content && !overwriteExisting
-                            ? [{ id: sourceNode.id, name: `${sourceNode.title || sourceNode.id}.png`, type: sourceNode.metadata.mimeType || "image/png", dataUrl: sourceNode.metadata.content, storageKey: sourceNode.metadata.storageKey }]
-                            : [];
-                    // 节点自身的图放在连接的参考图之后，保证连接图的编号（图1、图2…）与面板角标、@ 引用一致
-                    const referenceImages = [...new Map([...generationContext.referenceImages, ...sourceReference].map((image) => [image.id, image])).values()];
+                    const referenceImages = getImageGenerationReferences(generationContext.referenceImages, sourceNode, overwriteExisting);
+                    const sizing = isConfigNode || isImageNode ? sourceNode?.metadata?.imageSizing : undefined;
+                    const firstReference = referenceImages[0];
+                    const referenceRatio = sizing?.aspectRatio === "auto" && sizing.resolution !== "auto" && firstReference
+                        ? await readReferenceImageRatio(firstReference.dataUrl, firstReference.storageKey).catch(() => {
+                            throw new Error(t("settingsPanels.image.referenceSizeUnavailable"));
+                        })
+                        : undefined;
+                    if (runController.signal.aborted) return;
+                    const profile = sizing && getImageSizingProfile(generationConfig.model, resolveModelRequestConfig(generationConfig, generationConfig.model).apiFormat);
+                    const resolved = sizing && resolveImageSizing(sizing, referenceRatio, profile);
+                    if (resolved?.unsupportedResolution) throw new Error(t("settingsPanels.image.unsupportedModelResolution", { tier: resolved.unsupportedResolution.toUpperCase() }));
+                    if (resolved?.unsupportedRatio) throw new Error(t(profile ? "settingsPanels.image.unsupportedModelRatio" : "apiErrors.imageRatioLimit", { ratio: resolved.ratio }));
+                    const resolvedSizing = resolved && sizing ? { aspectRatio: resolved.ratio, resolution: sizing.resolution } : undefined;
+                    const imageConfigForRequest = resolved ? { ...generationConfig, size: resolved.size } : generationConfig;
                     const generationType = referenceImages.length ? ("edit" as const) : ("generation" as const);
-                    const generationMetadata = buildImageGenerationMetadata(generationType, generationConfig, count, referenceImages);
+                    const generationMetadata = buildImageGenerationMetadata(generationType, imageConfigForRequest, count, referenceImages);
                     const parentConfig = NODE_DEFAULT_SIZE[isConfigNode ? CanvasNodeType.Config : isImageNode ? CanvasNodeType.Image : CanvasNodeType.Text];
                     const imageConfig = NODE_DEFAULT_SIZE[CanvasNodeType.Image];
                     const parentPosition = sourceNode?.position || { x: 0, y: 0 };
@@ -2528,6 +2540,7 @@ function InfiniteCanvasPage() {
                             images: imageIds.map((id) => ({ id, status: NODE_STATUS_LOADING, content: "", naturalWidth: 0, naturalHeight: 0, bytes: 0, mimeType: "" })),
                             primaryImageId: undefined,
                             ...generationMetadata,
+                            imageRequestSizing: resolvedSizing ? { size: imageConfigForRequest.size, sizing: resolvedSizing } : undefined,
                         },
                     };
 
@@ -2578,8 +2591,8 @@ function InfiniteCanvasPage() {
                         imageIds.map(async (imageId) => {
                             try {
                                 const image = referenceImages.length
-                                    ? await requestEdit({ ...generationConfig, count: "1" }, effectivePrompt, referenceImages, { signal: controller.signal }).then((items) => items[0])
-                                    : await requestGeneration({ ...generationConfig, count: "1" }, effectivePrompt, { signal: controller.signal }).then((items) => items[0]);
+                                    ? await requestEdit({ ...imageConfigForRequest, count: "1" }, effectivePrompt, referenceImages, { signal: controller.signal, sizing: resolvedSizing }).then((items) => items[0])
+                                    : await requestGeneration({ ...imageConfigForRequest, count: "1" }, effectivePrompt, { signal: controller.signal, sizing: resolvedSizing }).then((items) => items[0]);
                                 const uploaded = await uploadImage(image.dataUrl, { signal: controller.signal });
                                 const imageSize = fitNodeSize(uploaded.width, uploaded.height, imageConfig.width, imageConfig.height);
                                 const item: CanvasNodeImage = { id: imageId, status: NODE_STATUS_SUCCESS, content: uploaded.url, storageKey: uploaded.storageKey, naturalWidth: uploaded.width, naturalHeight: uploaded.height, bytes: uploaded.bytes, mimeType: uploaded.mimeType };
@@ -2884,7 +2897,7 @@ function InfiniteCanvasPage() {
                           ...effectiveConfig,
                           model: savedImageMetadata.model || effectiveConfig.imageModel || effectiveConfig.model,
                           quality: savedImageMetadata.quality || effectiveConfig.quality,
-                          size: savedImageMetadata.size || effectiveConfig.size,
+                          size: savedImageMetadata.imageRequestSizing?.size || savedImageMetadata.size || effectiveConfig.size,
                           background: savedImageMetadata.background ?? effectiveConfig.background,
                           count: "1",
                       }
@@ -2949,8 +2962,8 @@ function InfiniteCanvasPage() {
                 }
 
                 const image = useReferenceImages
-                    ? await requestEdit(generationConfig, prompt, retryImages, { signal: controller.signal }).then((items) => items[0])
-                    : await requestGeneration(generationConfig, prompt, { signal: controller.signal }).then((items) => items[0]);
+                    ? await requestEdit(generationConfig, prompt, retryImages, { signal: controller.signal, sizing: savedImageMetadata?.imageRequestSizing?.sizing }).then((items) => items[0])
+                    : await requestGeneration(generationConfig, prompt, { signal: controller.signal, sizing: savedImageMetadata?.imageRequestSizing?.sizing }).then((items) => items[0]);
                 const uploadedImage = await uploadImage(image.dataUrl, { signal: controller.signal });
                 const imageConfig = NODE_DEFAULT_SIZE[CanvasNodeType.Image];
                 const retryImage: CanvasNodeImage = {
@@ -2967,7 +2980,7 @@ function InfiniteCanvasPage() {
                     ? {
                           generationType: savedImageMetadata.generationType,
                           model: generationConfig.model,
-                          size: generationConfig.size,
+                          size: savedImageMetadata.imageRequestSizing ? savedImageMetadata.size : generationConfig.size,
                           quality: generationConfig.quality,
                           ...(generationConfig.background ? { background: generationConfig.background } : {}),
                           count: savedImageMetadata.count || 1,
@@ -3213,6 +3226,11 @@ function InfiniteCanvasPage() {
                     isRunning={runningNodeId === panelNode.id}
                     mentionReferences={mentionReferencesByNodeId.get(panelNode.id) || EMPTY_REFERENCES}
                     connectedNodes={connectedNodesByNodeId.get(panelNode.id) || []}
+                    sizingReference={panelNode.type === CanvasNodeType.Image ? getImageGenerationReferences(
+                        buildNodeGenerationContext(panelNode.id, contentNodes, connections, "").referenceImages,
+                        panelNode,
+                        effectiveConfig.nodeRegenerateBehavior === "overwrite",
+                    )[0] : undefined}
                     onPromptChange={handleNodePromptChange}
                     onConfigChange={handleConfigNodeChange}
                     onGenerate={handleGenerateNode}
@@ -3226,7 +3244,7 @@ function InfiniteCanvasPage() {
                     }}
                 />
             ),
-        [configInputsById, confirmStopGeneration, connectedNodesByNodeId, contentNodes, disconnectNodeReference, handleConfigNodeChange, handleGenerateNode, handleNodePromptChange, mentionReferencesByNodeId, renderPluginPanel, runningNodeId, startNodeReferenceSelection],
+        [configInputsById, confirmStopGeneration, connectedNodesByNodeId, connections, contentNodes, disconnectNodeReference, effectiveConfig.nodeRegenerateBehavior, handleConfigNodeChange, handleGenerateNode, handleNodePromptChange, mentionReferencesByNodeId, renderPluginPanel, runningNodeId, startNodeReferenceSelection],
     );
 
     const renderNodeContentPanel = useCallback(
@@ -3235,6 +3253,9 @@ function InfiniteCanvasPage() {
                 node={contentNode}
                 isRunning={runningNodeId === contentNode.id}
                 inputSummary={getInputSummary(configInputsById.get(contentNode.id) || [])}
+                sizingReference={(contentNode.metadata?.generationMode || "image") === "image"
+                    ? buildNodeGenerationContext(contentNode.id, contentNodes, connections, contentNode.metadata?.composerContent ?? contentNode.metadata?.prompt ?? "").referenceImages[0]
+                    : undefined}
                 onConfigChange={handleConfigNodeChange}
                 onComposerToggle={() => setDialogNodeId((current) => (current === contentNode.id ? null : contentNode.id))}
                 onStop={confirmStopGeneration}
@@ -3244,7 +3265,7 @@ function InfiniteCanvasPage() {
                 }}
             />
         ),
-        [configInputsById, confirmStopGeneration, handleConfigNodeChange, handleGenerateNode, runningNodeId],
+        [configInputsById, confirmStopGeneration, connections, contentNodes, handleConfigNodeChange, handleGenerateNode, runningNodeId],
     );
 
     const handleViewportChange = useCallback((next: ViewportTransform) => {

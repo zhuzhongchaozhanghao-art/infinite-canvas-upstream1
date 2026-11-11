@@ -1,3 +1,5 @@
+import type { ImageSizing } from "@/lib/media-size";
+
 export type Position = {
     x: number;
     y: number;
@@ -56,6 +58,8 @@ export type CanvasNodeMetadata = {
     model?: string;
     reasoningEffort?: "auto" | "low" | "medium" | "high" | "xhigh";
     size?: string;
+    imageSizing?: ImageSizing;
+    imageRequestSizing?: { size: string; sizing: ImageSizing };
     quality?: string;
     background?: string;
     count?: number;

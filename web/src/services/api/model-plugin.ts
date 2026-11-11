@@ -236,6 +236,7 @@ export function getPluginTemplates(): Record<ModelCapability, PluginTemplate[]> 
  * @param {string[]} images - reference images as data URLs; empty for text-to-image
  * @param {object} params
  * @param {string} params.size - output size, e.g. "1024x1024" or "auto"
+ * @param {string} params.aspectRatio - output ratio preset or "auto"
  * @param {string} params.quality - "low" | "medium" | "high" | "xhigh" | "max"
  * @param {number} params.count - number of images
  * @param {string} [params.background] - "transparent" when requested
@@ -330,6 +331,7 @@ return await generateImage({
  * @param {string[]} images - reference images as data URLs
  * @param {object} params
  * @param {string} params.size - "2048x2048", "16:9", "auto", etc.; sent as aspectRatio
+ * @param {string} params.aspectRatio - output ratio preset or "auto"
  * @param {string} params.resolution - "1k" | "2k" | "4k" | "auto"; sent as imageSize
  * @param {string} params.quality - "low" | "medium" | "high" | "xhigh" | "max"; unused here
  * @param {number} params.count - number of generateContent calls
