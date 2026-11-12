@@ -515,9 +515,14 @@ function LoadingContent({ theme }: Pick<NodeContentRendererProps, "theme">) {
 
 function ErrorContent({ node, theme, onRetry }: Pick<NodeContentRendererProps, "node" | "theme" | "onRetry">) {
     const { t } = useTranslation();
+    const summary = node.metadata?.errorDetails;
+    const imageError = !summary || summary === t("canvas.projectPage.allFailed", { lng: "zh-CN" }) || summary === t("canvas.projectPage.allFailed", { lng: "en-US" })
+        ? node.metadata?.images?.find((image) => image.status === "error" && image.errorDetails)?.errorDetails
+        : undefined;
+    const details = imageError || summary || t("canvas.node.failed");
     return (
         <div className="flex max-w-[260px] flex-col items-center gap-3 px-5 text-center">
-            <div className="text-xs leading-5 text-red-300">{node.metadata?.errorDetails || t("canvas.node.failed")}</div>
+            <div className="line-clamp-4 max-w-full break-words text-xs leading-5 text-red-300" title={details}>{details}</div>
             <button
                 type="button"
                 className="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition hover:scale-[1.02]"

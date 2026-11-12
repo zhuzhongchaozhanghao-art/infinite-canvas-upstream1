@@ -30,7 +30,10 @@ export default {
     },
     settingsPanels: {
         common: { auto: "自动", low: "低", medium: "中", high: "高", xhigh: "极高", max: "最高" },
-        image: { title: "图像设置", quality: "质量", size: "尺寸", align16: "16 倍数对齐", align16Hint: "输入完成后自动向上补成 16 的倍数", resolution: "分辨率", aspectRatio: "宽高比", transparent: "透明背景", transparentHint: "开启后生成无背景的透明图像（仅部分模型可用）", count: "生成张数", images: "{{count}} 张" },
+        image: { title: "图像设置", quality: "质量", size: "尺寸", align16: "16 倍数对齐", align16Hint: "输入完成后自动向上补成 16 的倍数", resolution: "分辨率", aspectRatio: "宽高比", transparent: "透明背景", transparentHint: "开启后生成无背景的透明图像（仅部分模型可用）", count: "生成张数", images: "{{count}} 张",
+            followReference: "跟随参考图", serviceDefaultSize: "分辨率也为自动，尺寸由服务商决定。", readingReferenceSize: "正在读取图 1 的原始尺寸…", referenceSizeUnavailable: "无法读取图 1 的原始尺寸，请手动选择宽高比。",
+            noReferenceRatio: "未发送参考图，按 1:1 生成。可用 @ 引用图片。", firstReferenceRatio: "跟随图 1 的原始比例：{{ratio}}", unsupportedGeminiRatio: "当前 Gemini 接口不支持这个比例，请手动选择受支持的宽高比。",
+            closestModelRatio: "图 1 最接近的受支持比例：{{ratio}}", unsupportedModelRatio: "当前型号不支持 {{ratio}}，请选择其他比例。", unsupportedModelResolution: "当前型号固定为 {{tier}}，请选择对应分辨率或切换型号。", fixedTierSizeEstimate: "此型号按比例请求，宽高为预计尺寸。" },
         video: { title: "视频设置", quality: "清晰度", size: "尺寸", seconds: "秒数", mode: "模式", modes: { frames: "首尾帧模式", reference: "全能参考模式" }, resolution: "分辨率", ratio: "比例", duration: "时长", smart: "智能", output: "输出", generateAudio: "生成声音", watermark: "添加水印", adaptive: "自适应", sizes: { landscape: "横屏", portrait: "竖屏", square: "方形", widescreen: "宽屏", tall: "长图", auto: "自动" }, ratios: { landscape: "横屏", portrait: "竖屏", square: "方形", standardLandscape: "标准横屏", standardPortrait: "标准竖屏", cinematic: "宽银幕", adaptive: "自适应" } },
         audio: { title: "音频设置", voice: "声音", format: "格式", speed: "语速", instructions: "声音指令", instructionsPlaceholder: "例如：自然、温暖、适合旁白。" },
         text: { title: "文本设置", reasoning: "推理强度", count: "生成次数" },

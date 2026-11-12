@@ -8,6 +8,9 @@ import { useCanvasTheme } from "@/hooks/use-canvas-theme";
 import type { CanvasTheme } from "@/lib/canvas-theme";
 import { ImageSettingsPanel, imageQualityLabel, imageSizeLabel } from "@/components/image-settings-panel";
 import type { AiConfig } from "@/stores/use-config-store";
+import type { ImageSizing } from "@/lib/media-size";
+import type { ReferenceImage } from "@/types/image";
+import { readReferenceImageRatio } from "./canvas-node-generation";
 
 type CanvasImageSettingsPopoverProps = {
     config: AiConfig;
@@ -18,9 +21,10 @@ type CanvasImageSettingsPopoverProps = {
     getPopupContainer?: (triggerNode: HTMLElement) => HTMLElement;
     placement?: "topLeft" | "top" | "topRight" | "bottomLeft" | "bottom" | "bottomRight";
     autoAdjustOverflow?: boolean;
+    sizing?: { value?: ImageSizing; reference?: ReferenceImage; onChange: (value: ImageSizing) => void };
 };
 
-export function CanvasImageSettingsPopover({ config, onConfigChange, onOpenChange, buttonClassName, placement = "topLeft" }: CanvasImageSettingsPopoverProps) {
+export function CanvasImageSettingsPopover({ config, onConfigChange, onOpenChange, buttonClassName, placement = "topLeft", sizing }: CanvasImageSettingsPopoverProps) {
     const { t } = useTranslation();
     const theme = useCanvasTheme();
     const buttonRef = useRef<HTMLSpanElement>(null);
@@ -29,7 +33,9 @@ export function CanvasImageSettingsPopover({ config, onConfigChange, onOpenChang
     const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
     const quality = config.quality || "auto";
     const count = Math.max(1, Math.min(15, Math.floor(Math.abs(Number(config.count)) || 1)));
-    const activeSize = config.size || "auto";
+    const sizeLabel = sizing?.value
+        ? `${sizing.value.resolution === "auto" ? t("settingsPanels.common.auto") : sizing.value.resolution} · ${sizing.value.aspectRatio === "auto" ? t("settingsPanels.image.followReference") : sizing.value.aspectRatio}`
+        : imageSizeLabel(config.size || "auto");
     const updateOpen = (nextOpen: boolean) => {
         setOpen(nextOpen);
         onOpenChange?.(nextOpen);
@@ -58,14 +64,14 @@ export function CanvasImageSettingsPopover({ config, onConfigChange, onOpenChang
         };
     }, [onOpenChange, open]);
 
-    const panel = open && buttonRect ? <ImageSettingsPortal buttonRect={buttonRect} panelRef={panelRef} placement={placement} theme={theme} config={config} onConfigChange={onConfigChange} /> : null;
+    const panel = open && buttonRect ? <ImageSettingsPortal buttonRect={buttonRect} panelRef={panelRef} placement={placement} theme={theme} config={config} onConfigChange={onConfigChange} sizing={sizing} /> : null;
 
     return (
         <>
             <span ref={buttonRef} className="inline-flex min-w-0">
                 <Button size="small" type="text" className={buttonClassName || "!h-8 !max-w-[180px] !justify-start !rounded-full !px-2.5"} style={{ background: theme.node.fill, color: theme.node.text }} icon={<Settings2 className="size-3.5" />} onClick={() => updateOpen(!open)}>
                     <span className="truncate">
-                        {imageQualityLabel(quality)} · {imageSizeLabel(activeSize)} · {t("canvas.controls.images", { count })}
+                        {imageQualityLabel(quality)} · {sizeLabel} · {t("canvas.controls.images", { count })}
                     </span>
                 </Button>
             </span>
@@ -81,6 +87,7 @@ function ImageSettingsPortal({
     theme,
     config,
     onConfigChange,
+    sizing,
 }: {
     buttonRect: DOMRect;
     panelRef: RefObject<HTMLDivElement | null>;
@@ -88,7 +95,20 @@ function ImageSettingsPortal({
     theme: CanvasTheme;
     config: AiConfig;
     onConfigChange: (key: keyof AiConfig, value: string) => void;
+    sizing?: CanvasImageSettingsPopoverProps["sizing"];
 }) {
+    const dataUrl = sizing?.reference?.dataUrl;
+    const storageKey = sizing?.reference?.storageKey;
+    const [reference, setReference] = useState<{ dataUrl: string; storageKey?: string; ratio: string }>();
+    useEffect(() => {
+        if (!dataUrl) return;
+        let active = true;
+        void readReferenceImageRatio(dataUrl, storageKey).catch(() => "").then((ratio) => {
+            if (active) setReference({ dataUrl, storageKey, ratio });
+        });
+        return () => { active = false; };
+    }, [dataUrl, storageKey]);
+    const referenceRatio = !sizing?.reference ? null : !dataUrl ? "" : reference && reference.dataUrl === dataUrl && reference.storageKey === storageKey ? reference.ratio : undefined;
     const width = 356;
     const gap = 8;
     const margin = 12;
@@ -119,7 +139,7 @@ function ImageSettingsPortal({
             onMouseDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
         >
-            <ImageSettingsPanel config={config} onConfigChange={(key, value) => onConfigChange(key, value)} theme={theme} className="space-y-4" />
+            <ImageSettingsPanel config={config} onConfigChange={(key, value) => onConfigChange(key, value)} theme={theme} className="space-y-4" sizing={sizing && { ...sizing, referenceRatio }} />
         </div>,
         document.body,
     );
