@@ -13,6 +13,7 @@ if (process.env.PERSONAL_PROMPT_TEST_CHILD !== "1") {
     let failWrite = false;
     let exported: Blob | undefined;
     let settingsChanges = 0;
+    let assetSources: unknown[] = [];
     mock.module("file-saver", () => ({
         saveAs: (blob: Blob) => {
             exported = blob;
@@ -35,6 +36,16 @@ if (process.env.PERSONAL_PROMPT_TEST_CHILD !== "1") {
             },
         },
     }));
+    mock.module("@/stores/use-asset-source-store", () => ({
+        useAssetSourceStore: {
+            getState: () => ({ sources: assetSources }),
+            setState: (state: { sources: unknown[] }) => {
+                assetSources = state.sources;
+                settingsChanges++;
+            },
+            persist: { hasHydrated: () => true },
+        },
+    }));
     mock.module("localforage", () => ({
         default: {
             createInstance: () => ({
@@ -55,6 +66,7 @@ if (process.env.PERSONAL_PROMPT_TEST_CHILD !== "1") {
         failWrite = false;
         exported = undefined;
         settingsChanges = 0;
+        assetSources = [];
     });
 
     test("backup round trip preserves cover and source-qualified pins; reimport is idempotent", async () => {
@@ -131,7 +143,8 @@ if (process.env.PERSONAL_PROMPT_TEST_CHILD !== "1") {
         await exportAppConfig();
         const backup = JSON.parse(await exported!.text());
         expect(backup.personalPrompts).toEqual(saved);
-        const { personalPrompts: _personal, ...legacy } = backup;
+        expect(backup.assetSources).toEqual([]);
+        const { personalPrompts: _personal, assetSources: _sources, ...legacy } = backup;
         await importAppConfig(new File([JSON.stringify(legacy)], "legacy.json"));
         expect(await readPersonalPrompts()).toEqual(saved);
         expect(settingsChanges).toBe(2);
@@ -143,10 +156,24 @@ if (process.env.PERSONAL_PROMPT_TEST_CHILD !== "1") {
         for (const data of [
             { ...base, personalPrompts: { version: 99 } },
             { ...base, promptSources: { sources: null }, personalPrompts: emptyPersonalLibrary() },
+            { ...base, assetSources: [{ id: "bad", kind: "unsupported" }], personalPrompts: emptyPersonalLibrary() },
         ]) {
             await expect(importAppConfig(new File([JSON.stringify(data)], "bad.json"))).rejects.toThrow();
             expect(settingsChanges).toBe(0);
             expect((await readPersonalPrompts()).items).toEqual([item]);
         }
+    });
+    test("online source settings round trip without embedding catalog caches or clearing legacy imports", async () => {
+        const source = { id: "mine", name: "My source", kind: "costume", url: "https://example.com/data/costume.json", baseUrl: "https://example.com/", homepage: "https://example.com/", enabled: false, builtIn: false };
+        assetSources = [source];
+        await exportAppConfig();
+        const backup = JSON.parse(await exported!.text());
+        expect(backup.assetSources).toEqual([source]);
+        assetSources = [];
+        await importAppConfig(new File([JSON.stringify(backup)], "sources.json"));
+        expect(assetSources).toEqual([source]);
+        const { assetSources: _sources, ...legacy } = backup;
+        await importAppConfig(new File([JSON.stringify(legacy)], "legacy.json"));
+        expect(assetSources).toEqual([source]);
     });
 }

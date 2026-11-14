@@ -4,14 +4,14 @@ export const CHARACTER_LIBRARY_PLUGIN_URL = "builtin:character-library";
 export const bundledPluginEntries = [
     {
         id: "character-library",
-        version: "1.0.0",
+        version: "1.1.0",
         url: CHARACTER_LIBRARY_PLUGIN_URL,
         icon: "👥",
         get name() {
-            return i18n.t("characterLibrary.title");
+            return i18n.t("assetLibrary.title");
         },
         get description() {
-            return i18n.t("characterLibrary.pluginDescription");
+            return i18n.t("assetLibrary.pluginDescription");
         },
     },
 ];

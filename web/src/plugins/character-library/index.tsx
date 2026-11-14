@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { App, Alert, Button, Card, Empty, Input, Menu, Modal, Pagination, Select, Spin, Tag } from "antd";
+import { App, Alert, Button, Card, Empty, Input, Menu, Modal, Pagination, Select, Spin, Tag, Tabs } from "antd";
 import { FolderOpen, Image as ImageIcon, Search, Settings2, UsersRound } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,8 @@ import { deleteStoredImages } from "@/services/image-storage";
 import { focusViewportForNode } from "@/lib/canvas/canvas-node-geometry";
 import { CHARACTER_LIBRARY_DEMO, chooseCharacterDirectory, loadCharacterDetail, restoreCharacterSource, saveCharacterUrl, type CharacterSource } from "@/services/api/character-library";
 import { buildCharacterGroup, filterCharacters, type CharacterDetail, type CharacterRole } from "./catalog";
+import { OnlineAssets } from "./online-assets";
+import type { AssetKind } from "./asset-catalog";
 
 function CharacterImage({ source, path, title, className = "" }: { source: CharacterSource; path: string; title: string; className?: string }) {
     const { t } = useTranslation();
@@ -50,6 +52,7 @@ function CharacterLibraryModal({ host, onClose }: { host: CanvasPluginHost; onCl
     const { t } = useTranslation();
     const { message } = App.useApp();
     const theme = useCanvasTheme();
+    const [tab, setTab] = useState<"character" | AssetKind>("character");
     const [source, setSource] = useState<CharacterSource | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -212,21 +215,23 @@ function CharacterLibraryModal({ host, onClose }: { host: CanvasPluginHost; onCl
                 title={
                     <div className="flex flex-wrap items-center gap-3 pr-6">
                         <UsersRound className="size-5" />
-                        <span>{t("characterLibrary.title")}</span>
-                        <span className="text-xs font-normal opacity-60">{t("characterLibrary.count", { count: roles.length })}</span>
-                        <div className="ml-auto flex items-center gap-2">
-                            <Input
-                                allowClear
-                                prefix={<Search className="size-4" />}
-                                placeholder={t("characterLibrary.search")}
-                                value={keyword}
-                                onChange={(event) => {
-                                    setKeyword(event.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                            <Button type="text" icon={<Settings2 className="size-4" />} aria-label={t("characterLibrary.settings")} onClick={() => setSettingsOpen(true)} />
-                        </div>
+                        <span>{t("assetLibrary.title")}</span>
+                        {tab === "character" ? <span className="text-xs font-normal opacity-60">{t("characterLibrary.count", { count: roles.length })}</span> : null}
+                        {tab === "character" ? (
+                            <div className="ml-auto flex items-center gap-2">
+                                <Input
+                                    allowClear
+                                    prefix={<Search className="size-4" />}
+                                    placeholder={t("characterLibrary.search")}
+                                    value={keyword}
+                                    onChange={(event) => {
+                                        setKeyword(event.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                                <Button type="text" icon={<Settings2 className="size-4" />} aria-label={t("characterLibrary.settings")} onClick={() => setSettingsOpen(true)} />
+                            </div>
+                        ) : null}
                     </div>
                 }
                 onCancel={onClose}
@@ -235,89 +240,96 @@ function CharacterLibraryModal({ host, onClose }: { host: CanvasPluginHost; onCl
                 centered
                 styles={{ body: { height: "78dvh", overflow: "hidden" } }}
             >
-                <div className="flex h-full min-h-0 gap-4" data-canvas-no-zoom onWheelCapture={(event) => event.stopPropagation()}>
-                    <aside className="thin-scrollbar w-48 shrink-0 overflow-y-auto border-r pr-3 max-sm:hidden" style={{ borderColor: theme.node.stroke }}>
-                        <Menu
-                            mode="inline"
-                            selectedKeys={[category]}
-                            items={categories}
-                            onClick={({ key }) => {
-                                setCategory(key.replace(/:all$/, ""));
-                                setFilters({});
-                                setPage(1);
-                            }}
-                            style={{ background: "transparent", border: 0, color: "inherit" }}
-                        />
-                    </aside>
-                    <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-                        {error ? <Alert type="error" message={error} showIcon /> : null}
-                        {source?.key.endsWith(CHARACTER_LIBRARY_DEMO) ? <Alert type="info" message={t("characterLibrary.demoNote")} showIcon /> : null}
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Select
-                                className="min-w-36 sm:hidden"
-                                value={category}
-                                options={[{ value: "", label: t("characterLibrary.all") }, ...[...new Set(roles.map((role) => role.category))].map((value) => ({ value, label: value }))]}
-                                onChange={(value) => {
-                                    setCategory(value);
-                                    setFilters({});
-                                    setPage(1);
-                                }}
-                            />
-                            {attributes.map(({ key, values }) => (
-                                <Select
-                                    key={key}
-                                    allowClear
-                                    size="small"
-                                    className="min-w-24"
-                                    aria-label={key}
-                                    placeholder={key}
-                                    value={filters[key] || undefined}
-                                    options={values.map((value) => ({ value, label: value }))}
-                                    onChange={(value) => {
-                                        setFilters((current) => ({ ...current, [key]: value || "" }));
-                                        setPage(1);
-                                    }}
-                                />
-                            ))}
-                            {Object.values(filters).some(Boolean) ? (
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    onClick={() => {
+                <div className="flex h-full min-h-0 flex-col">
+                    <Tabs activeKey={tab} onChange={(key) => setTab(key as typeof tab)} items={["character", "pose", "costume", "portrait"].map((key) => ({ key, label: t(`assetLibrary.${key}`) }))} />
+                    {tab !== "character" ? (
+                        <OnlineAssets key={tab} kind={tab} host={host} onClose={onClose} />
+                    ) : (
+                        <div className="flex flex-1 min-h-0 gap-4" data-canvas-no-zoom onWheelCapture={(event) => event.stopPropagation()}>
+                            <aside className="thin-scrollbar w-48 shrink-0 overflow-y-auto border-r pr-3 max-sm:hidden" style={{ borderColor: theme.node.stroke }}>
+                                <Menu
+                                    mode="inline"
+                                    selectedKeys={[category]}
+                                    items={categories}
+                                    onClick={({ key }) => {
+                                        setCategory(key.replace(/:all$/, ""));
                                         setFilters({});
                                         setPage(1);
                                     }}
-                                >
-                                    {t("characterLibrary.reset")}
-                                </Button>
-                            ) : null}
-                        </div>
-                        <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
-                            <Spin spinning={loading || readingDetail} tip={t("characterLibrary.loading")}>
-                                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                                    {source &&
-                                        filtered.slice((page - 1) * PROMPT_PAGE_SIZE, page * PROMPT_PAGE_SIZE).map((role) => (
-                                            <Card key={`${source.key}:${role.id}`} hoverable styles={{ body: { padding: 0 } }} className="overflow-hidden">
-                                                <button type="button" className="block w-full text-left" onClick={() => void inspect(role)}>
-                                                    <CharacterImage source={source} path={role.preview} title={role.name} className="aspect-[3/4] w-full" />
-                                                    <div className="p-3">
-                                                        <div className="truncate text-sm font-semibold">{role.name}</div>
-                                                        <div className="mt-1 truncate text-xs opacity-55">
-                                                            {["性别", "年龄段", "物种", "体格"]
-                                                                .map((key) => role.attributes[key])
-                                                                .filter(Boolean)
-                                                                .join("·")}
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            </Card>
-                                        ))}
+                                    style={{ background: "transparent", border: 0, color: "inherit" }}
+                                />
+                            </aside>
+                            <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+                                {error ? <Alert type="error" message={error} showIcon /> : null}
+                                {source?.key.endsWith(CHARACTER_LIBRARY_DEMO) ? <Alert type="info" message={t("characterLibrary.demoNote")} showIcon /> : null}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Select
+                                        className="min-w-36 sm:hidden"
+                                        value={category}
+                                        options={[{ value: "", label: t("characterLibrary.all") }, ...[...new Set(roles.map((role) => role.category))].map((value) => ({ value, label: value }))]}
+                                        onChange={(value) => {
+                                            setCategory(value);
+                                            setFilters({});
+                                            setPage(1);
+                                        }}
+                                    />
+                                    {attributes.map(({ key, values }) => (
+                                        <Select
+                                            key={key}
+                                            allowClear
+                                            size="small"
+                                            className="min-w-24"
+                                            aria-label={key}
+                                            placeholder={key}
+                                            value={filters[key] || undefined}
+                                            options={values.map((value) => ({ value, label: value }))}
+                                            onChange={(value) => {
+                                                setFilters((current) => ({ ...current, [key]: value || "" }));
+                                                setPage(1);
+                                            }}
+                                        />
+                                    ))}
+                                    {Object.values(filters).some(Boolean) ? (
+                                        <Button
+                                            type="text"
+                                            size="small"
+                                            onClick={() => {
+                                                setFilters({});
+                                                setPage(1);
+                                            }}
+                                        >
+                                            {t("characterLibrary.reset")}
+                                        </Button>
+                                    ) : null}
                                 </div>
-                                {!loading && !filtered.length ? <Empty description={t("characterLibrary.empty")} /> : null}
-                            </Spin>
+                                <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
+                                    <Spin spinning={loading || readingDetail} tip={t("characterLibrary.loading")}>
+                                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                                            {source &&
+                                                filtered.slice((page - 1) * PROMPT_PAGE_SIZE, page * PROMPT_PAGE_SIZE).map((role) => (
+                                                    <Card key={`${source.key}:${role.id}`} hoverable styles={{ body: { padding: 0 } }} className="overflow-hidden">
+                                                        <button type="button" className="block w-full text-left" onClick={() => void inspect(role)}>
+                                                            <CharacterImage source={source} path={role.preview} title={role.name} className="aspect-[3/4] w-full" />
+                                                            <div className="p-3">
+                                                                <div className="truncate text-sm font-semibold">{role.name}</div>
+                                                                <div className="mt-1 truncate text-xs opacity-55">
+                                                                    {["性别", "年龄段", "物种", "体格"]
+                                                                        .map((key) => role.attributes[key])
+                                                                        .filter(Boolean)
+                                                                        .join("·")}
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    </Card>
+                                                ))}
+                                        </div>
+                                        {!loading && !filtered.length ? <Empty description={t("characterLibrary.empty")} /> : null}
+                                    </Spin>
+                                </div>
+                                <Pagination size="small" current={page} pageSize={PROMPT_PAGE_SIZE} total={filtered.length} showSizeChanger={false} hideOnSinglePage onChange={setPage} />
+                            </section>
                         </div>
-                        <Pagination size="small" current={page} pageSize={PROMPT_PAGE_SIZE} total={filtered.length} showSizeChanger={false} hideOnSinglePage onChange={setPage} />
-                    </section>
+                    )}
                 </div>
             </Modal>
             <Modal
@@ -421,15 +433,15 @@ function CharacterLibraryModal({ host, onClose }: { host: CanvasPluginHost; onCl
 const plugin: CanvasPlugin = {
     id: "character-library",
     get name() {
-        return i18n.t("characterLibrary.title");
+        return i18n.t("assetLibrary.title");
     },
-    version: "1.0.0",
+    version: "1.1.0",
     nodes: [],
     panels: [
         {
             id: "character-library:browser",
             get title() {
-                return i18n.t("characterLibrary.title");
+                return i18n.t("assetLibrary.title");
             },
             icon: <UsersRound className="size-4.5" />,
             Content: CharacterLibraryModal,

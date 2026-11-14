@@ -9,6 +9,7 @@ import { videoResolutionOptions } from "@/components/video-settings-panel";
 import { ChannelEditorDrawer } from "@/components/layout/channel-editor-drawer";
 import { ConfigLocalProxy } from "@/components/layout/config-local-proxy";
 import { ConfigPromptSources } from "@/components/layout/config-prompt-sources";
+import { ConfigAssetSources } from "@/components/layout/config-asset-sources";
 import { ConfigLocalStorage } from "@/components/layout/config-local-storage";
 import { ConfigTheme } from "@/components/layout/config-theme";
 import type { AppLocale } from "@/i18n";
@@ -307,6 +308,11 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                         key: "prompt-sources",
                         label: t("config.tabs.promptSources"),
                         children: <ConfigPromptSources />,
+                    },
+                    {
+                        key: "asset-sources",
+                        label: t("assetLibrary.sources"),
+                        children: <ConfigAssetSources />,
                     },
                     {
                         key: "webdav",

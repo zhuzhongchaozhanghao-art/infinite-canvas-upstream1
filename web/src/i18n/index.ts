@@ -5,6 +5,7 @@ import enUS from "@/i18n/locales/en-US";
 import zhCN from "@/i18n/locales/zh-CN";
 import { personalPromptsEn, personalPromptsZh } from "./personal-prompts";
 import { characterLibraryEn, characterLibraryZh } from "./character-library";
+import { assetLibraryEn, assetLibraryZh } from "./asset-library";
 
 export type AppLocale = "zh-CN" | "en-US";
 
@@ -12,8 +13,8 @@ const LOCALE_STORAGE_KEY = "infinite-canvas:locale";
 
 i18n.use(initReactI18next).init({
     resources: {
-        "zh-CN": { translation: { ...zhCN, personalPrompts: personalPromptsZh, characterLibrary: characterLibraryZh } },
-        "en-US": { translation: { ...enUS, personalPrompts: personalPromptsEn, characterLibrary: characterLibraryEn } },
+        "zh-CN": { translation: { ...zhCN, personalPrompts: personalPromptsZh, characterLibrary: characterLibraryZh, assetLibrary: assetLibraryZh } },
+        "en-US": { translation: { ...enUS, personalPrompts: personalPromptsEn, characterLibrary: characterLibraryEn, assetLibrary: assetLibraryEn } },
     },
     lng: (localStorage.getItem(LOCALE_STORAGE_KEY) as AppLocale) || "zh-CN",
     fallbackLng: "zh-CN",
