@@ -13,6 +13,7 @@ export type InstalledPlugin = {
     enabled: boolean;
     local?: boolean; // Local plugin discovered in web/public/plugins; disabled by default and refetched from its URL when enabled.
     official?: boolean; // Installed from the official registry and grouped accordingly in the manager.
+    bundled?: boolean; // Compiled panel plugin supplied by this application version.
     installedAt: string;
 };
 

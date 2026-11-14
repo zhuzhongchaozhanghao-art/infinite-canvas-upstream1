@@ -8,6 +8,7 @@ import { getNodePluginId, getNodeSpec, listNodeDefinitions, useNodeRegistryVersi
 import { installPluginFromUrl, setPluginEnabled, uninstallPlugin, updatePlugin } from "@/lib/canvas/plugin-loader";
 import { fetchOfficialPlugins, hasUpgrade, type OfficialPluginEntry } from "@/lib/canvas/plugin-registry";
 import { usePluginStore, type InstalledPlugin } from "@/stores/canvas/use-plugin-store";
+import { bundledPluginEntries } from "@/lib/canvas/bundled-plugins";
 
 // 节点管理器：按节点浏览已注册节点（内置 + 插件），并合并原插件的安装、启停、更新、卸载
 export function CanvasPluginManagerModal({ open, onClose, onCreateNode }: { open: boolean; onClose: () => void; onCreateNode?: (type: string) => void }) {
@@ -31,7 +32,7 @@ export function CanvasPluginManagerModal({ open, onClose, onCreateNode }: { open
     const matches = (...texts: (string | undefined)[]) => !query || texts.some((text) => text?.toLowerCase().includes(query));
     const localPlugins = plugins.filter((item) => item.local && matches(item.name, item.id, item.description));
     const thirdPartyPlugins = plugins.filter((item) => !item.local && !item.official && matches(item.name, item.id, item.description, item.url));
-    const officialFiltered = official.filter((entry) => matches(entry.name, entry.id, entry.description));
+    const officialFiltered = [...bundledPluginEntries, ...official.filter((entry) => !bundledPluginEntries.some((bundled) => bundled.id === entry.id))].filter((entry) => matches(entry.name, entry.id, entry.description));
 
     const loadOfficial = useCallback(async () => {
         setLoadingOfficial(true);
@@ -94,7 +95,7 @@ export function CanvasPluginManagerModal({ open, onClose, onCreateNode }: { open
     const installedControls = (record: InstalledPlugin, upgradable = false) => (
         <>
             <Switch size="small" checked={record.enabled} loading={busyId === record.id} onChange={(checked) => runOnPlugin(record, () => setPluginEnabled(record, checked), t(checked ? "canvas.plugins.enabled" : "canvas.plugins.disabled"))} />
-            {!record.local && (
+            {!record.local && !record.bundled && (
                 <>
                     <Button
                         type={upgradable ? "primary" : "text"}
@@ -168,9 +169,10 @@ export function CanvasPluginManagerModal({ open, onClose, onCreateNode }: { open
                 <div className="rounded-lg border px-3 py-2 text-xs" style={{ borderColor: theme.node.stroke, color: theme.node.muted }}>
                     {t("canvas.plugins.loadFailed", { error: officialError })}
                 </div>
-            ) : loadingOfficial && official.length === 0 ? (
+            ) : null}
+            {loadingOfficial && officialFiltered.length === 0 ? (
                 emptyHint(t("canvas.plugins.loadingOfficial"))
-            ) : official.length === 0 ? (
+            ) : officialFiltered.length === 0 ? (
                 emptyHint(t("canvas.plugins.noOfficial"))
             ) : (
                 <div className="thin-scrollbar max-h-[46vh] space-y-2 overflow-auto">

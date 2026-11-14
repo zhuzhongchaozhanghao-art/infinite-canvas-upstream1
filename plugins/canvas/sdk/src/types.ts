@@ -335,6 +335,22 @@ export type PluginRuntime = CanvasPluginApp & {
 };
 
 // 插件包(默认导出对象,或返回它的工厂函数)
+export type CanvasPluginPanelHost = {
+    getNode: (id: string) => CanvasNodeData | null;
+    getNodes: () => CanvasNodeData[];
+    getConnections: () => CanvasConnection[];
+    getUpstream: (nodeId: string) => CanvasNodeData[];
+    getDownstream: (nodeId: string) => CanvasNodeData[];
+    updateNode: (nodeId: string, patch: Partial<Pick<CanvasNodeData, "title" | "width" | "height">>) => void;
+    updateMetadata: (nodeId: string, patch: CanvasNodeMetadata) => void;
+    applyOps: (ops: CanvasAgentOp[]) => void;
+    ai: CanvasPluginAi;
+    media?: CanvasPluginMedia;
+    openPanel: (nodeId: string) => void;
+    closePanel: () => void;
+};
+export type CanvasPluginPanelDefinition = { id: string; title: string; icon: ReactNode; Content: ComponentType<{ host: CanvasPluginPanelHost; onClose: () => void }> };
+
 export type CanvasPlugin = {
     id: string; // 唯一,kebab-case
     name: string;
@@ -343,6 +359,7 @@ export type CanvasPlugin = {
     minAppVersion?: string;
     css?: string; // 插件样式,启用时自动注入、卸载/禁用时自动清理
     nodes: CanvasNodeDefinition[];
+    panels?: CanvasPluginPanelDefinition[];
     setup?: (app: CanvasPluginApp) => void | (() => void);
 };
 

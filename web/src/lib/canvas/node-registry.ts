@@ -2,10 +2,20 @@ import { create } from "zustand";
 
 import i18n from "@/i18n";
 
-import type { CanvasNodeDefinition } from "@/types/canvas-plugin";
+import type { CanvasNodeDefinition, CanvasPluginPanelDefinition } from "@/types/canvas-plugin";
 import { CanvasNodeType } from "@/types/canvas";
 
 const definitions = new Map<string, CanvasNodeDefinition>();
+const panels = new Map<string, { owner: string; definition: CanvasPluginPanelDefinition }>();
+
+export function registerPluginPanels(defs: CanvasPluginPanelDefinition[], pluginId: string) {
+    defs.forEach((definition) => panels.set(definition.id, { owner: pluginId, definition }));
+    bump();
+}
+
+export function listPluginPanels() {
+    return Array.from(panels.values(), (panel) => panel.definition);
+}
 const ownerByType = new Map<string, string>(); // type -> pluginId; built-in nodes use "builtin".
 
 // Increment the registry version on registration or removal to update dependent UI such as creation menus.
@@ -23,6 +33,7 @@ export function registerNodeDefinitions(defs: CanvasNodeDefinition[], pluginId =
 }
 
 export function unregisterPluginNodes(pluginId: string) {
+    for (const [id, panel] of panels) if (panel.owner === pluginId) panels.delete(id);
     for (const [type, owner] of ownerByType) {
         if (owner !== pluginId) continue;
         definitions.delete(type);

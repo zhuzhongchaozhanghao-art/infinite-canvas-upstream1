@@ -1,4 +1,5 @@
-import { registerNodeDefinitions, unregisterPluginNodes } from "@/lib/canvas/node-registry";
+import { registerNodeDefinitions, registerPluginPanels, unregisterPluginNodes } from "@/lib/canvas/node-registry";
+import { bundledPluginEntries, CHARACTER_LIBRARY_PLUGIN_URL, readBundledPlugin } from "./bundled-plugins";
 import { getPluginRuntime } from "@/lib/canvas/plugin-runtime";
 import { usePluginStore, type InstalledPlugin } from "@/stores/canvas/use-plugin-store";
 import type { CanvasPlugin } from "@/types/canvas-plugin";
@@ -9,6 +10,7 @@ const cleanups = new Map<string, () => void>();
 // A remote plugin may export CanvasPlugin directly or a factory that receives runtime and returns CanvasPlugin.
 // The factory uses runtime.React so the bundle does not need its own React copy.
 async function evaluatePluginSource(source: string): Promise<CanvasPlugin> {
+    if (source === CHARACTER_LIBRARY_PLUGIN_URL) return readBundledPlugin(source);
     const blob = new Blob([source], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
     try {
@@ -25,11 +27,12 @@ async function evaluatePluginSource(source: string): Promise<CanvasPlugin> {
 function assertPlugin(plugin: unknown): asserts plugin is CanvasPlugin {
     const value = plugin as Partial<CanvasPlugin> | null;
     if (!value || typeof value !== "object") throw new Error(i18n.t("canvas.pluginErrors.invalidExport"));
-    if (!value.id || !Array.isArray(value.nodes) || !value.nodes.length) throw new Error(i18n.t("canvas.pluginErrors.missingFields"));
+    if (!value.id || !Array.isArray(value.nodes) || (!value.nodes.length && !value.panels?.length)) throw new Error(i18n.t("canvas.pluginErrors.missingFields"));
 }
 
 export function activatePlugin(plugin: CanvasPlugin) {
     registerNodeDefinitions(plugin.nodes, plugin.id);
+    registerPluginPanels(plugin.panels || [], plugin.id);
     const runtime = getPluginRuntime();
     const disposers: Array<() => void> = [];
     // Inject declared styles when enabled and remove them when disabled or uninstalled.
@@ -46,6 +49,7 @@ export function deactivatePlugin(pluginId: string) {
 }
 
 async function fetchPluginSource(url: string) {
+    if (url === CHARACTER_LIBRARY_PLUGIN_URL) return url;
     const response = await fetch(url);
     if (!response.ok) throw new Error(i18n.t("canvas.pluginErrors.downloadFailed", { status: response.status }));
     return response.text();
@@ -59,10 +63,11 @@ function withCacheBust(url: string) {
 // Install or replace a plugin from a URL and enable it immediately.
 // bustCache bypasses HTTP/CDN caches during upgrades while persisting a clean URL without the timestamp query.
 export async function installPluginFromUrl(url: string, opts?: { official?: boolean; bustCache?: boolean }) {
-    const source = await fetchPluginSource(opts?.bustCache ? withCacheBust(url) : url);
+    const bundled = url === CHARACTER_LIBRARY_PLUGIN_URL;
+    const source = await fetchPluginSource(opts?.bustCache && !bundled ? withCacheBust(url) : url);
     const plugin = await evaluatePluginSource(source);
     deactivatePlugin(plugin.id); // Replace the previous version.
-    usePluginStore.getState().upsert({ id: plugin.id, name: plugin.name || plugin.id, version: plugin.version || "0.0.0", description: plugin.description, url, source, enabled: true, official: opts?.official });
+    usePluginStore.getState().upsert({ id: plugin.id, name: plugin.name || plugin.id, version: plugin.version || "0.0.0", description: plugin.description, url, source, enabled: true, official: bundled || opts?.official, bundled });
     activatePlugin(plugin);
     return plugin;
 }
@@ -96,6 +101,10 @@ export async function ensurePluginsLoaded() {
     if (loaded) return;
     loaded = true;
     await usePluginStore.persist.rehydrate();
+    for (const entry of bundledPluginEntries) {
+        const previous = usePluginStore.getState().plugins.find((record) => record.id === entry.id);
+        usePluginStore.getState().upsert({ ...entry, source: entry.url, official: true, bundled: true, enabled: previous?.enabled ?? true, installedAt: previous?.installedAt });
+    }
     await loadLocalPlugins(); // Discover disabled local plugins first, then activate all enabled records.
     const records = usePluginStore.getState().plugins.filter((record) => record.enabled);
     await Promise.all(

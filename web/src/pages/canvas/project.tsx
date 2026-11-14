@@ -3526,6 +3526,7 @@ function InfiniteCanvasPage() {
                 ) : null}
 
                 <CanvasToolbar
+                    pluginHost={pluginHost}
                     selectedCount={selectedNodeIds.size}
                     canvasTool={canvasTool}
                     onFocusSelected={focusSelectedNode}

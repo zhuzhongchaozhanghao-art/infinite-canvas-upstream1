@@ -1,0 +1,114 @@
+{
+  "name": "温润儒商",
+  "category": "现代都市·现代",
+  "preview": "https://oss.aix.studio/ai_characters/test/202611/file1793585054212_10241.png?imageView2/2/w/360/q/80",
+  "cardTags": "男·中年·人类·标准",
+  "attributes": {
+    "大类": "现代都市",
+    "时代": "现代",
+    "性别": "男",
+    "年龄段": "中年",
+    "物种": "人类",
+    "体格": "标准",
+    "身高": "中等",
+    "肤色": "浅",
+    "发长": "短发",
+    "发色": "黑",
+    "气质": "温柔",
+    "地域/族裔": "东亚",
+    "场景": "职场写字楼"
+  },
+  "tags": [
+    "现代都市",
+    "现代",
+    "男",
+    "中年",
+    "人类",
+    "标准",
+    "中等",
+    "浅",
+    "短发",
+    "黑",
+    "温柔",
+    "东亚",
+    "职场写字楼"
+  ],
+  "descriptions": [
+    {
+      "label": "辨识特征",
+      "text": "常含浅笑，胸前口袋插一支旧钢笔"
+    },
+    {
+      "label": "着装描述",
+      "text": "米灰羊绒西装配同色马甲，浅褐针织领带，圆头棕皮鞋，随身皮质记事本"
+    }
+  ],
+  "files": [
+    {
+      "label": "角色立绘",
+      "url": "https://oss.aix.studio/ai_characters/test/202611/file1793585054212_10241.png"
+    },
+    {
+      "label": "肖像特写",
+      "url": "https://oss.aix.studio/ai_characters/test/202607/file1783145198795_53144.jpg"
+    },
+    {
+      "label": "表情九宫格",
+      "url": "https://oss.aix.studio/ai_characters/test/202607/file1783147669933_54742.jpg"
+    },
+    {
+      "label": "三视图",
+      "url": "https://oss.aix.studio/ai_characters/test/202607/file1783145204168_53153.jpg"
+    }
+  ],
+  "id": "3336841e63cb",
+  "source": "https://aix.studio/AixCanvas?flowCode=719",
+  "localFiles": [
+    {
+      "label": "封面预览",
+      "url": "https://oss.aix.studio/ai_characters/test/202611/file1793585054212_10241.png?imageView2/2/w/360/q/80",
+      "originalName": "file1793585054212_10241.png",
+      "path": "封面预览_22279312_file1793585054212_10241.png",
+      "bytes": 91298,
+      "sha256": "001a0afd205e1c4e47168fc81d2a5f7e086ae637d85730a61284f36a4c19d28d",
+      "contentType": "image/png"
+    },
+    {
+      "label": "角色立绘",
+      "url": "https://oss.aix.studio/ai_characters/test/202611/file1793585054212_10241.png",
+      "originalName": "file1793585054212_10241.png",
+      "path": "角色立绘_45143222_file1793585054212_10241.png",
+      "bytes": 1412306,
+      "sha256": "521080e9c3f2f955e60009d356587279ad4bcb9059c805592dabc1f1dd69f024",
+      "contentType": "image/png"
+    },
+    {
+      "label": "肖像特写",
+      "url": "https://oss.aix.studio/ai_characters/test/202607/file1783145198795_53144.jpg",
+      "originalName": "file1783145198795_53144.jpg",
+      "path": "肖像特写_549e0ce9_file1783145198795_53144.jpg",
+      "bytes": 2966680,
+      "sha256": "f7998b6cf3a5331039c50e83c52e1741fb41e433c9a9f0e560f52b4c7f750953",
+      "contentType": "image/jpeg"
+    },
+    {
+      "label": "表情九宫格",
+      "url": "https://oss.aix.studio/ai_characters/test/202607/file1783147669933_54742.jpg",
+      "originalName": "file1783147669933_54742.jpg",
+      "path": "表情九宫格_34e8a64b_file1783147669933_54742.jpg",
+      "bytes": 2468918,
+      "sha256": "69a9da82ed3a49e20f20b788378dbdaf5912839ada308f3b0753602cca040016",
+      "contentType": "image/jpeg"
+    },
+    {
+      "label": "三视图",
+      "url": "https://oss.aix.studio/ai_characters/test/202607/file1783145204168_53153.jpg",
+      "originalName": "file1783145204168_53153.jpg",
+      "path": "三视图_aa03709b_file1783145204168_53153.jpg",
+      "bytes": 2287055,
+      "sha256": "9abdea04f8af37b97a5f9162999df732baad7c762b6f1a6b3c05af17229dafc5",
+      "contentType": "image/jpeg"
+    }
+  ],
+  "downloadErrors": []
+}

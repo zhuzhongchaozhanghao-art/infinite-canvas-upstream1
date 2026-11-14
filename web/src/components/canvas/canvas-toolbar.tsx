@@ -5,7 +5,8 @@ import { CircleDot, Eraser, Grid2x2, Group, Hand, Image as ImageIcon, Info, Loca
 
 import { useCanvasTheme } from "@/hooks/use-canvas-theme";
 import { type CanvasBackgroundMode, type CanvasTheme } from "@/lib/canvas-theme";
-import { getNodePluginId, listNodeDefinitions, useNodeRegistryVersion } from "@/lib/canvas/node-registry";
+import { getNodePluginId, listNodeDefinitions, listPluginPanels, useNodeRegistryVersion } from "@/lib/canvas/node-registry";
+import type { CanvasPluginHost } from "@/types/canvas-plugin";
 import { getNodeSpec } from "@/constant/canvas";
 import { useActiveTheme, useThemeStore } from "@/stores/use-theme-store";
 import { useConfigStore } from "@/stores/use-config-store";
@@ -14,6 +15,7 @@ import { ThemeSwatch, themeLabel } from "@/components/layout/config-theme";
 import { useTranslation } from "react-i18next";
 
 export const CanvasToolbar = memo(function CanvasToolbar({
+    pluginHost,
     selectedCount,
     canvasTool,
     canUndo,
@@ -37,6 +39,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
     onShowImageInfoChange,
     onFocusSelected,
 }: {
+    pluginHost: CanvasPluginHost;
     selectedCount: number;
     canvasTool: "select" | "pan";
     canUndo: boolean;
@@ -77,13 +80,16 @@ export const CanvasToolbar = memo(function CanvasToolbar({
     const [panelX, setPanelX] = useState(0);
     const [extensionsOpen, setExtensionsOpen] = useState(false);
     const [extPanelX, setExtPanelX] = useState(0);
+    const [openPluginPanel, setOpenPluginPanel] = useState<string | null>(null);
     // Keep extension plugin nodes synchronized with registry changes.
     useNodeRegistryVersion();
     const extensionDefs = listNodeDefinitions().filter((def) => def.showInCreateMenu !== false && getNodePluginId(def.type) !== "builtin");
     const dockStyle = { background: theme.toolbar.panel, borderColor: theme.toolbar.border, color: theme.toolbar.item, boxShadow: colorTheme === "dark" ? "0 18px 45px rgba(0,0,0,.32)" : "0 16px 40px rgba(28,25,23,.12)" };
     const hoverStyle = { background: theme.toolbar.itemHover, color: theme.toolbar.activeText };
     const activeStyle = { background: theme.toolbar.activeBg, color: theme.toolbar.activeText };
-    const tip = hovered ? toolLabel(hovered, t) : "";
+    const pluginPanels = listPluginPanels();
+    const ActivePluginPanel = pluginPanels.find((panel) => panel.id === openPluginPanel)?.Content;
+    const tip = hovered ? (pluginPanels.find((panel) => `panel-${panel.id}` === hovered)?.title || toolLabel(hovered, t)) : "";
 
     // Close extension-node and canvas-appearance popovers when clicking outside the toolbar and its panels.
     useEffect(() => {
@@ -156,6 +162,11 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                 <ToolbarButton id="tool-upload" label={t("canvas.toolbar.upload")} hovered={hovered} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={onUpload}>
                     <Upload className="size-4.5" />
                 </ToolbarButton>
+                {pluginPanels.map((panel) => (
+                    <ToolbarButton key={panel.id} id={`panel-${panel.id}`} label={panel.title} active={openPluginPanel === panel.id} hovered={hovered} activeStyle={activeStyle} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={() => { setAppearanceOpen(false); setExtensionsOpen(false); setOpenPluginPanel(panel.id); }}>
+                        {panel.icon}
+                    </ToolbarButton>
+                ))}
                 <Divider theme={theme} />
                 <ToolbarButton
                     id="tool-style"
@@ -189,6 +200,7 @@ export const CanvasToolbar = memo(function CanvasToolbar({
                 </ToolbarButton>
             </div>
 
+            {ActivePluginPanel ? <ActivePluginPanel host={pluginHost} onClose={() => setOpenPluginPanel(null)} /> : null}
             {extensionsOpen && extensionDefs.length ? (
                 <div
                     className="thin-scrollbar pointer-events-auto absolute bottom-[72px] z-30 max-h-[50vh] w-[240px] -translate-x-1/2 overflow-y-auto rounded-xl border p-2 shadow-xl backdrop-blur"
