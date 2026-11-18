@@ -186,6 +186,21 @@ function resolveModelImageRequestSize(config: AiConfig, sizing?: ImageSizing, fo
     return format === "ratio-for-fixed-tier" && profile.fixedResolution ? result.ratio : result.size;
 }
 
+function resolveOpenAiImageOutput(config: AiConfig, sizing?: ImageSizing) {
+    const profile = getImageSizingProfile(config.model, config.apiFormat);
+    if (!profile?.openAiResolutionInQuality) {
+        return { size: resolveModelImageRequestSize(config, sizing, "ratio-for-fixed-tier"), quality: normalizeQuality(config.quality) };
+    }
+
+    const savedSize = config.size.trim().toLowerCase();
+    const resolution = sizing?.resolution ?? inferMediaScale(savedSize);
+    const aspectRatio = sizing?.aspectRatio ?? (parseImageDimensions(savedSize) ? inferMediaRatio(savedSize) : savedSize || "auto");
+    const result = resolveImageSizing({ aspectRatio, resolution }, undefined, profile);
+    if (result.unsupportedRatio) throw new Error(i18n.t("settingsPanels.image.unsupportedModelRatio", { ratio: result.ratio }));
+    // These OpenAI-compatible aliases take the ratio in size and the resolution tier in quality.
+    return { size: result.ratio === "auto" ? undefined : result.ratio, quality: resolution === "auto" ? undefined : resolution };
+}
+
 function resolveGeminiImageConfig(config: AiConfig, sizing?: ImageSizing) {
     const value = config.size.trim();
     const dimensions = parseImageDimensions(value);
@@ -737,8 +752,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             throw new Error(readAxiosError(error, apiText("requestFailed")));
         }
     }
-    const quality = normalizeQuality(config.quality);
-    const requestSize = resolveModelImageRequestSize(requestConfig, options?.sizing, "ratio-for-fixed-tier");
+    const { quality, size: requestSize } = resolveOpenAiImageOutput(requestConfig, options?.sizing);
     const background = normalizeBackground(config.background);
     try {
         const response = await axios.post<ImageApiResponse>(
@@ -801,8 +815,7 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
         }
     }
 
-    const quality = normalizeQuality(config.quality);
-    const requestSize = resolveModelImageRequestSize(requestConfig, options?.sizing, "ratio-for-fixed-tier");
+    const { quality, size: requestSize } = resolveOpenAiImageOutput(requestConfig, options?.sizing);
     const background = normalizeBackground(config.background);
     const formData = new FormData();
     formData.set("model", requestConfig.model);
