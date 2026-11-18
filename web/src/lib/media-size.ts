@@ -30,11 +30,14 @@ const bananaSizes: typeof imageSizePresets = {
     "4k": { "1:1": "4096x4096", "2:3": "3392x5056", "3:2": "5056x3392", "4:3": "4800x3584", "3:4": "3584x4800", "16:9": "5504x3072", "9:16": "3072x5504", "21:9": "6336x2688" },
 };
 
-type ImageSizingProfile = { ratios: string[]; sizes?: typeof imageSizePresets; fixedResolution?: string };
+type ImageSizingProfile = { ratios: string[]; sizes?: typeof imageSizePresets; fixedResolution?: string; openAiResolutionInQuality?: boolean };
 const geminiCanvasRatios = Object.keys(bananaSizes["1k"]);
 
 export function getImageSizingProfile(model: string, apiFormat: string): ImageSizingProfile | undefined {
     const name = model.toLowerCase().split("::").at(-1)?.replace(/^models\//, "") || "";
+    if (name === "nano-banana2.1" || name === "gemini-nano-banana-2.1") {
+        return { ratios: geminiCanvasRatios, sizes: bananaSizes, openAiResolutionInQuality: true };
+    }
     const banana = /^nano-banana(?:-?2|-pro)(?:-(1k|2k|4k))?$/.exec(name);
     if (banana || /^gemini-(?:3\.1-flash|3-pro)-image(?:-preview)?$/.test(name)) {
         return { ratios: geminiCanvasRatios, sizes: bananaSizes, fixedResolution: banana?.[1] };
